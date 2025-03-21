@@ -33,6 +33,7 @@
     }
   },
   "bundle": {
+    "createUpdaterArtifacts": true,
     "active": true,
     "targets": "all",
     "icon": [
@@ -50,6 +51,9 @@
   },
   "plugins": {
     "updater": {
+      "windows": {
+        "installMode": "passive"
+      },
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVCQzVCOEVEQTMyODlGMDYKUldRR255aWo3YmpGV3k1M1J6VXE4WGlXSEs2UStIMWJJQ3FLdDFZL1hGQU1ha2s3bkxVMExTeWsK",
       "endpoints": [
         "https://github.com/ahaoboy/input-viz/releases/latest/download/latest.json"
