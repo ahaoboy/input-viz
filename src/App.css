@@ -1,0 +1,34 @@
+html, body {
+  padding: 0;
+  margin: 0;
+  background: #00000000;
+  border: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+#root {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.event-text {
+  font-size: 24px;
+  font-weight: bold;
+  display: flex;
+  width: fit-content;
+  justify-content: center;
+  align-items: center;
+}
