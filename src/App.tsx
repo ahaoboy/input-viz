@@ -6,7 +6,7 @@ import {
   PhysicalSize,
   primaryMonitor,
 } from "@tauri-apps/api/window";
-import { Accessor, createMemo, createSignal, For, onMount } from "solid-js";
+import { createMemo, createSignal, For, onMount } from "solid-js";
 
 type InputEvent = {
   event_type: {
@@ -79,11 +79,9 @@ function sortBy(s: string) {
 type StackItem = { key: string; ts: number };
 
 function App() {
-  let stackDomHideRef!: HTMLDivElement;
   let stackDomRef!: HTMLDivElement;
   const [keyMap, setKeyMap] = createSignal<Record<string, boolean>>({});
   const [stack, setStack] = createSignal<StackItem[]>([]);
-  const [stackHide, setStackHide] = createSignal<StackItem[]>([]);
 
   const keyMapString = createMemo(() => {
     const v: string[] = [];
@@ -130,10 +128,8 @@ function App() {
     } else {
       top.ts = Date.now();
     }
-
-    setStackHide([...v]);
-    updateWindow();
     setStack([...v]);
+    updateWindow();
   };
 
   onMount(() => {
@@ -152,21 +148,14 @@ function App() {
       if (!len) {
         hide();
       }
-      setStackHide([...v]);
-      await updateWindow();
       setStack([...v]);
+      await updateWindow();
     }, CHECK_INV);
     return () => clearInterval(handle);
   });
 
   const getSize = async (scale = 1): Promise<{ w: number; h: number }> => {
     const rect = stackDomRef?.getBoundingClientRect();
-
-    console.log(
-      "rect",
-      stackDomRef?.getBoundingClientRect(),
-      stackDomHideRef?.getBoundingClientRect(),
-    );
     if (!rect) {
       return { w: 0, h: 0 };
     }
@@ -228,11 +217,10 @@ function App() {
               <For each={item.key.split(" ")}>
                 {(key) => (
                   <div
-                    class={`event-text ${
-                      keyMap()[key] && index() === stack().length - 1
-                        ? "event-text-press"
-                        : ""
-                    }`}
+                    class={`event-text ${keyMap()[key] && index() === stack().length - 1
+                      ? "event-text-press"
+                      : ""
+                      }`}
                     style={{
                       padding: `0 ${EVENT_ITEM_PADDING}px`,
                       margin: `${EVENT_ITEM_MARGIN}px 0`,
