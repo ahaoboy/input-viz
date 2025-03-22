@@ -221,8 +221,8 @@ function App() {
       const h = mon.size.height;
       const pos = new PhysicalPosition({ x: w * 2, y: h * 2 });
       win.setPosition(pos);
-      // const size = new PhysicalSize(0, 0);
-      // win.setSize(size);
+      const size = new PhysicalSize(w, h);
+      win.setSize(size);
       rerender();
     }
   };
