@@ -223,6 +223,7 @@ function App() {
       win.setPosition(pos);
       const size = new PhysicalSize(w, h);
       win.setSize(size);
+      // win.setVisibleOnAllWorkspaces(true)
       rerender();
     }
   };
