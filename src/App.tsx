@@ -6,7 +6,7 @@ import {
   PhysicalSize,
   primaryMonitor,
 } from "@tauri-apps/api/window";
-import { createEffect, createMemo, createSignal, For, onMount } from "solid-js";
+import { Accessor, createMemo, createSignal, For, onMount } from "solid-js";
 
 type InputEvent = {
   event_type: {
@@ -26,8 +26,8 @@ const FONT_SIZE = 24;
 const EVENT_ITEM_PADDING = 12;
 const EVENT_ITEM_MARGIN = 12;
 const BORDER_SIZE = 2;
-const BORDER_COLOR = "";
-const TRANSPARENT_COLOR = "";
+// const BORDER_COLOR = "";
+// const TRANSPARENT_COLOR = "";
 
 function getKey(s: string): string {
   const map: Record<string, string> = {
@@ -55,6 +55,8 @@ function getKey(s: string): string {
     AltGr: "Alt",
   };
   if (map[s]) return map[s];
+  if (s.startsWith("Shift")) return "Shift";
+  if (s.startsWith("Control")) return "Ctrl";
   if (s.startsWith("Key")) return s.slice(3);
   if (s.startsWith("Num")) return s.slice(3);
   if (s.endsWith("Arrow")) return s.slice(0, -5);
@@ -64,8 +66,10 @@ function getKey(s: string): string {
 }
 
 function sortBy(s: string) {
-  if (s.startsWith("Control")) return 100;
+  if (s.startsWith("Ctrl")) return 100;
   if (s.startsWith("Shift")) return 90;
+  if (s.endsWith("Alt")) return 60;
+  if (s.endsWith("Win")) return 60;
   if (s.endsWith("Click")) return 50;
   if (s.endsWith("Wheel")) return 30;
   if (Number.isInteger(s)) return 20;
@@ -75,9 +79,11 @@ function sortBy(s: string) {
 type StackItem = { key: string; ts: number };
 
 function App() {
+  let stackDomHideRef!: HTMLDivElement;
   let stackDomRef!: HTMLDivElement;
   const [keyMap, setKeyMap] = createSignal<Record<string, boolean>>({});
   const [stack, setStack] = createSignal<StackItem[]>([]);
+  const [stackHide, setStackHide] = createSignal<StackItem[]>([]);
 
   const keyMapString = createMemo(() => {
     const v: string[] = [];
@@ -107,25 +113,27 @@ function App() {
   };
 
   const push = (key: string) => {
-    setStack((prev) => {
-      const now = Date.now();
-      let v = prev.filter((item) => item.ts + MAX_LIVE_TIME >= now);
-      while (v.length >= STACK_MAX_SIZE) v.shift();
-      const top = v.at(-1);
-      if (!top) {
-        v.push({ ts: Date.now(), key });
-      } else if (
-        top.key !== key &&
-        key.split(" ").some((k) => !top.key.split(" ").includes(k))
-      ) {
-        // remove duplicate keys
-        v = v.filter((i) => i.key !== key);
-        v.push({ ts: Date.now(), key });
-      } else {
-        top.ts = Date.now();
-      }
-      return v;
-    });
+    let v = stack();
+    const now = Date.now();
+    v = v.filter((item) => item.ts + MAX_LIVE_TIME >= now);
+    while (v.length >= STACK_MAX_SIZE) v.shift();
+    const top = v.at(-1);
+    if (!top) {
+      v.push({ ts: Date.now(), key });
+    } else if (
+      top.key !== key &&
+      key.split(" ").some((k) => !top.key.split(" ").includes(k))
+    ) {
+      // remove duplicate keys
+      v = v.filter((i) => i.key !== key);
+      v.push({ ts: Date.now(), key });
+    } else {
+      top.ts = Date.now();
+    }
+
+    setStackHide([...v]);
+    updateWindow();
+    setStack([...v]);
   };
 
   onMount(() => {
@@ -136,7 +144,7 @@ function App() {
       if (key.length) push(key);
     });
 
-    const handle = setInterval(() => {
+    const handle = setInterval(async () => {
       let v = stack();
       const now = Date.now();
       const len = v.length;
@@ -144,6 +152,8 @@ function App() {
       if (!len) {
         hide();
       }
+      setStackHide([...v]);
+      await updateWindow();
       setStack([...v]);
     }, CHECK_INV);
     return () => clearInterval(handle);
@@ -151,6 +161,12 @@ function App() {
 
   const getSize = async (scale = 1): Promise<{ w: number; h: number }> => {
     const rect = stackDomRef?.getBoundingClientRect();
+
+    console.log(
+      "rect",
+      stackDomRef?.getBoundingClientRect(),
+      stackDomHideRef?.getBoundingClientRect(),
+    );
     if (!rect) {
       return { w: 0, h: 0 };
     }
@@ -158,18 +174,6 @@ function App() {
       w: ((rect.width + BORDER_SIZE * 2) * scale) | 0,
       h: ((rect.height + BORDER_SIZE * 2) * scale) | 0,
     };
-
-    // const mon = await primaryMonitor();
-    // if (!mon) return { w: 0, h: 0 };
-    // const itemHeight = FONT_SIZE + EVENT_ITEM_PADDING * 4 +
-    //   EVENT_ITEM_MARGIN * 2;
-    // const maxKeyLength = stack().reduce(
-    //   (max, item) => Math.max(max, item.key.length),
-    //   0,
-    // );
-    // const w = maxKeyLength * FONT_SIZE + EVENT_ITEM_PADDING * 2;
-    // const h = stack().length * itemHeight;
-    // return { w: w * scale, h: h * scale };
   };
 
   const updateWindow = async () => {
@@ -198,14 +202,6 @@ function App() {
       await win.setPosition(pos);
     }
   };
-
-  createEffect(() => {
-    if (stack().length > 0) {
-      updateWindow();
-    } else {
-      // hide();
-    }
-  });
 
   return (
     <main
