@@ -170,7 +170,7 @@ function App() {
     hide();
     listen<InputEvent>("input-event", async (event) => {
       const s = eventToString(event.payload);
-      console.log(event, s);
+      // console.log(event, s);
       updateKeyMap(event.payload);
       const key = getKeyMapString();
       if (key.length) {
@@ -193,13 +193,13 @@ function App() {
   const update = async () => {
     const win = getCurrentWindow();
     const mon = await primaryMonitor();
-    console.log(win, mon, ref.current);
+    // console.log(win, mon, ref.current);
     if (mon && ref.current) {
       const scale = mon.scaleFactor;
       const rect = ref.current.getBoundingClientRect();
       const domW = (rect.width * scale) | 0;
       const domH = (rect.height * scale) | 0;
-      console.log(domW, domH);
+      // console.log(domW, domH);
       const w = mon.size.width;
       const h = mon.size.height;
       const winX = w - PADDING * 4 - domW;
@@ -215,7 +215,7 @@ function App() {
   const hide = async () => {
     const win = getCurrentWindow();
     const mon = await primaryMonitor();
-    console.log(win, mon, ref.current);
+    // console.log(win, mon, ref.current);
     if (mon && ref.current) {
       const w = mon.size.width;
       const h = mon.size.height;

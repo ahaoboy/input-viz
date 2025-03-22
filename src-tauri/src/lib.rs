@@ -5,7 +5,7 @@ fn start_monitoring(app_handle: tauri::AppHandle) {
     use rdev::{listen, EventType};
     std::thread::spawn(move || {
         if let Err(error) = listen(move |event| {
-            println!("My callback {:?}", event);
+            // println!("My callback {:?}", event);
             match event.event_type {
                 EventType::MouseMove { x: _, y: _ } => {}
                 _ => {
@@ -34,11 +34,11 @@ pub fn run() {
                 .on_menu_event(
                     |app: &AppHandle<tauri::Wry>, event| match event.id.as_ref() {
                         "quit" => {
-                            println!("quit menu item was clicked");
+                            // println!("quit menu item was clicked");
                             app.exit(0);
                         }
                         _ => {
-                            println!("menu item {:?} not handled", event.id);
+                            // println!("menu item {:?} not handled", event.id);
                         }
                     },
                 )
