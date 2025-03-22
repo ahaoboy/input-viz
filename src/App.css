@@ -16,7 +16,6 @@ html, body {
   align-items: center;
   width: 100%;
   height: 100%;
-  background: #000000;
   color: white;
 }
 
@@ -35,9 +34,27 @@ html, body {
   flex-direction: column;
 }
 
-.event-text {
+.event-item {
+  margin: 12px 0;
+  padding: 12px;
+  background: black;
   display: flex;
   width: fit-content;
   justify-content: center;
   align-items: center;
+  flex-direction: row;
+}
+
+.event-text {
+  margin: 12px 0;
+  padding: 12px;
+  background: black;
+  display: flex;
+  width: fit-content;
+  justify-content: center;
+  align-items: center;
+}
+
+.event-text-press {
+  color: yellow;
 }

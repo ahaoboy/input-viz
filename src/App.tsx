@@ -27,7 +27,7 @@ function eventToString(e: InputEvent): string {
 
 const BAR_HEIGHT = 100;
 const PADDING = BAR_HEIGHT / 2;
-const STACK_MAX_SIZE = 7;
+const STACK_MAX_SIZE = 6;
 const CHECK_INV = 500;
 const MAX_LIVE_TIME = 3000;
 
@@ -159,8 +159,10 @@ function App() {
       stackRef.current.push({ ts: Date.now(), key });
       return;
     }
-    if (top.key !== key) {
+    if (top.key !== key && !top.key.split(" ").includes(key)) {
       stackRef.current.push({ ts: Date.now(), key });
+    } else {
+      top.ts = Date.now();
     }
   };
 
@@ -173,8 +175,8 @@ function App() {
       const key = getKeyMapString();
       if (key.length) {
         push(key);
-        update();
       }
+      update();
     });
     const handle = setInterval(() => {
       const now = Date.now();
@@ -225,15 +227,43 @@ function App() {
     }
   };
   const opacity = stackRef.current.length ? "100%" : "0%";
-  return (
-    <main className="container" style={{ opacity }}>
+  const Stack = () => {
+    return (
       <div ref={ref} className="event-stack">
         {stackRef.current.map((i, k) => (
-          <div className="event-text" key={[k, i.key, i.ts].join("-")}>
-            {i.key}
-          </div>
+          <StackItem item={i} index={k} key={[i.key, i.ts, k].join("-")} />
         ))}
       </div>
+    );
+  };
+
+  const StackItem = ({ item, index }: { item: StackItem; index: number }) => {
+    return (
+      <div className="event-item">
+        {item.key.split(" ").map((i, k) => (
+          <KeyItem
+            item={i}
+            index={index}
+            key={[item.key, item.ts, i, k].join("-")}
+          />
+        ))}
+      </div>
+    );
+  };
+  const KeyItem = ({ item, index }: { item: string; index: number }) => {
+    const cls =
+      (keyMapRef.current[item] && index === stackRef.current.length - 1)
+        ? "event-text-press"
+        : "";
+    return (
+      <div className={`event-text ${cls}`}>
+        {item}
+      </div>
+    );
+  };
+  return (
+    <main className="container" style={{ opacity }}>
+      <Stack />
     </main>
   );
 }
