@@ -21,10 +21,6 @@ type InputEvent = {
   };
 };
 
-function eventToString(e: InputEvent): string {
-  return JSON.stringify(e.event_type);
-}
-
 const BAR_HEIGHT = 100;
 const PADDING = BAR_HEIGHT / 2;
 const STACK_MAX_SIZE = 6;
@@ -169,8 +165,6 @@ function App() {
   useLayoutEffect(() => {
     hide();
     listen<InputEvent>("input-event", async (event) => {
-      const s = eventToString(event.payload);
-      // console.log(event, s);
       updateKeyMap(event.payload);
       const key = getKeyMapString();
       if (key.length) {
