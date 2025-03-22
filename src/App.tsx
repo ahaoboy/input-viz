@@ -158,6 +158,8 @@ function App() {
       return;
     }
     if (top.key !== key && !top.key.split(" ").includes(key)) {
+      // remove duplicate keys
+      stackRef.current = stackRef.current.filter((i) => i.key !== key);
       stackRef.current.push({ ts: Date.now(), key });
     } else {
       top.ts = Date.now();
@@ -219,8 +221,8 @@ function App() {
       const h = mon.size.height;
       const pos = new PhysicalPosition({ x: w * 2, y: h * 2 });
       win.setPosition(pos);
-      const size = new PhysicalSize(0, 0);
-      win.setSize(size);
+      // const size = new PhysicalSize(0, 0);
+      // win.setSize(size);
       rerender();
     }
   };
