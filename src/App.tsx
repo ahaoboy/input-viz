@@ -79,8 +79,6 @@ function getKey(s: string): string {
   return s;
 }
 
-// ;;;;''[[]\==--098787654432121` ]
-
 function sortBy(s: string) {
   if (s.startsWith("Control")) {
     return 100;
