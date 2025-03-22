@@ -26,9 +26,12 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_positioner::init())
         .setup(|app| {
-            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&quit_i])?;
+            let show_item = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+            let hide_item = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_item, &hide_item, &quit_item])?;
             let _ = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
                 .show_menu_on_left_click(true)
                 .on_menu_event(
@@ -36,6 +39,16 @@ pub fn run() {
                         "quit" => {
                             // println!("quit menu item was clicked");
                             app.exit(0);
+                        }
+                        "show" => {
+                            for i in app.webview_windows() {
+                                i.1.show().expect("failed to show webview_window");
+                            }
+                        }
+                        "hide" => {
+                            for i in app.webview_windows() {
+                                i.1.hide().expect("failed to hide webview_window");
+                            }
                         }
                         _ => {
                             // println!("menu item {:?} not handled", event.id);

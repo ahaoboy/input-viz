@@ -217,10 +217,11 @@ function App() {
               <For each={item.key.split(" ")}>
                 {(key) => (
                   <div
-                    class={`event-text ${keyMap()[key] && index() === stack().length - 1
-                      ? "event-text-press"
-                      : ""
-                      }`}
+                    class={`event-text ${
+                      keyMap()[key] && index() === stack().length - 1
+                        ? "event-text-press"
+                        : ""
+                    }`}
                     style={{
                       padding: `0 ${EVENT_ITEM_PADDING}px`,
                       margin: `${EVENT_ITEM_MARGIN}px 0`,
