@@ -1,5 +1,4 @@
 import "./App.css";
-import { useLayoutEffect, useReducer, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import {
   getCurrentWindow,
@@ -7,6 +6,7 @@ import {
   PhysicalSize,
   primaryMonitor,
 } from "@tauri-apps/api/window";
+import { createEffect, createMemo, createSignal, For, onMount } from "solid-js";
 
 type InputEvent = {
   event_type: {
@@ -14,280 +14,235 @@ type InputEvent = {
     ButtonRelease?: string;
     KeyPress?: string;
     KeyRelease?: string;
-    Wheel?: {
-      delta_x: number;
-      delta_y: number;
-    };
+    Wheel?: { delta_x: number; delta_y: number };
   };
 };
 
 const BOTTOM_MARGIN = 200;
 const STACK_MAX_SIZE = 6;
-const CHECK_INV = 500;
+const CHECK_INV = 100;
 const MAX_LIVE_TIME = 3000;
 const FONT_SIZE = 24;
 const EVENT_ITEM_PADDING = 12;
 const EVENT_ITEM_MARGIN = 12;
+const BORDER_SIZE = 2;
+const BORDER_COLOR = ""
+const TRANSPARENT_COLOR = ""
 
 function getKey(s: string): string {
   const map: Record<string, string> = {
-    "Left": "LeftClick",
-    "Right": "RightClick",
-    "Middle": "WheelClick",
-    "BackQuote": "`",
-    "BackSlash": "/",
-    "Slash": "\\",
-    "Comma": ",",
-    "Dot": ".",
-    "KpDelete": ".",
-    "SemiColon": ";",
-    "Return": "Enter",
-    "Quote": "'",
-    "LeftBracket": "[",
-    "RightBracket": "]",
-    "Minus": "-",
-    "KpMinus": "-",
-    "Equal": "=",
-    "KpPlus": "+",
-    "KpMultiply": "*",
-    "KpDivide": "/",
-    "Lock": "NumLock",
-    "AltGr": "Alt",
+    Left: "LeftClick",
+    Right: "RightClick",
+    Middle: "WheelClick",
+    BackQuote: "`",
+    BackSlash: "/",
+    Slash: "\\",
+    Comma: ",",
+    Dot: ".",
+    KpDelete: ".",
+    SemiColon: ";",
+    Return: "Enter",
+    Quote: "'",
+    LeftBracket: "[",
+    RightBracket: "]",
+    Minus: "-",
+    KpMinus: "-",
+    Equal: "=",
+    KpPlus: "+",
+    KpMultiply: "*",
+    KpDivide: "/",
+    Lock: "NumLock",
+    AltGr: "Alt",
   };
-  if (map[s]) {
-    return map[s];
-  }
-  if (s.startsWith("Key")) {
-    return s.slice(3);
-  }
-  if (s.startsWith("Num")) {
-    return s.slice(3);
-  }
-
-  if (s.endsWith("Arrow")) {
-    return s.slice(0, -5);
-  }
-  if (s.startsWith("Meta")) {
-    return "Win";
-  }
-
-  if (s.startsWith("Kp")) {
-    return s.slice(2);
-  }
-
+  if (map[s]) return map[s];
+  if (s.startsWith("Key")) return s.slice(3);
+  if (s.startsWith("Num")) return s.slice(3);
+  if (s.endsWith("Arrow")) return s.slice(0, -5);
+  if (s.startsWith("Meta")) return "Win";
+  if (s.startsWith("Kp")) return s.slice(2);
   return s;
 }
 
 function sortBy(s: string) {
-  if (s.startsWith("Control")) {
-    return 100;
-  }
-  if (s.startsWith("Shift")) {
-    return 90;
-  }
-  if (s.endsWith("Click")) {
-    return 50;
-  }
-  if (s.endsWith("Wheel")) {
-    return 30;
-  }
-  if (Number.isInteger(s)) {
-    return 20;
-  }
+  if (s.startsWith("Control")) return 100;
+  if (s.startsWith("Shift")) return 90;
+  if (s.endsWith("Click")) return 50;
+  if (s.endsWith("Wheel")) return 30;
+  if (Number.isInteger(s)) return 20;
   return 10;
 }
 
-type StackItem = {
-  key: string;
-  ts: number;
-};
+type StackItem = { key: string; ts: number };
+
 function App() {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const keyMapRef = useRef<Record<string, boolean>>({});
-  const stackRef = useRef<StackItem[]>([]);
-  const rerender = useReducer((c) => ++c, 0)[1];
+  let stackDomRef!: HTMLDivElement;
+  const [keyMap, setKeyMap] = createSignal<Record<string, boolean>>({});
+  const [stack, setStack] = createSignal<StackItem[]>([]);
 
-  const updateKeyMap = (e: InputEvent): string | undefined => {
-    keyMapRef.current["WheelUp"] = false;
-    keyMapRef.current["WheelDown"] = false;
-    if (e.event_type.ButtonPress) {
-      const key = getKey(e.event_type.ButtonPress);
-      keyMapRef.current[key] = true;
-      return key;
-    } else if (e.event_type.ButtonRelease) {
-      const key = getKey(e.event_type.ButtonRelease);
-      keyMapRef.current[key] = false;
-      return key;
-    } else if (e.event_type.KeyPress) {
-      const key = getKey(e.event_type.KeyPress);
-      keyMapRef.current[key] = true;
-      return key;
-    } else if (e.event_type.KeyRelease) {
-      const key = getKey(e.event_type.KeyRelease);
-      keyMapRef.current[key] = false;
-      return key;
-    } else if (e.event_type.Wheel) {
-      if (e.event_type.Wheel.delta_y >= 0) {
-        keyMapRef.current["WheelUp"] = true;
-        keyMapRef.current["WheelDown"] = false;
-        return "WheelUp";
-      } else {
-        keyMapRef.current["WheelUp"] = false;
-        keyMapRef.current["WheelDown"] = true;
-        return "WheelDown";
-      }
-    }
-    return;
-  };
-
-  const getKeyMapString = () => {
+  const keyMapString = createMemo(() => {
     const v: string[] = [];
-    for (const [a, b] of Object.entries(keyMapRef.current)) {
-      if (b) {
-        v.push(a);
-      }
+    for (const [a, b] of Object.entries(keyMap())) {
+      if (b) v.push(a);
     }
     return v.sort((a, b) => sortBy(b) - sortBy(a)).join(" ");
+  });
+
+  const updateKeyMap = (e: InputEvent) => {
+    const km = { ...keyMap() };
+    km["WheelUp"] = false;
+    km["WheelDown"] = false;
+    if (e.event_type.ButtonPress) {
+      km[getKey(e.event_type.ButtonPress)] = true;
+    } else if (e.event_type.ButtonRelease) {
+      km[getKey(e.event_type.ButtonRelease)] = false;
+    } else if (e.event_type.KeyPress) {
+      km[getKey(e.event_type.KeyPress)] = true;
+    } else if (e.event_type.KeyRelease) {
+      km[getKey(e.event_type.KeyRelease)] = false;
+    } else if (e.event_type.Wheel) {
+      km["WheelUp"] = e.event_type.Wheel.delta_y >= 0;
+      km["WheelDown"] = e.event_type.Wheel.delta_y < 0;
+    }
+    setKeyMap(km);
   };
 
   const push = (key: string) => {
-    while (stackRef.current.length > STACK_MAX_SIZE) {
-      stackRef.current.shift();
-    }
-    const top = stackRef.current.at(-1);
-    if (!top) {
-      stackRef.current.push({ ts: Date.now(), key });
-      return;
-    }
-    if (
-      top.key !== key &&
-      key.split(" ").some((k) => !top.key.split(" ").includes(k))
-    ) {
-      // remove duplicate keys
-      stackRef.current = stackRef.current.filter((i) => i.key !== key);
-      stackRef.current.push({ ts: Date.now(), key });
-    } else {
-      top.ts = Date.now();
-    }
+    setStack((prev) => {
+      const now = Date.now();
+      let v = prev.filter((item) => item.ts + MAX_LIVE_TIME >= now);
+      while (v.length >= STACK_MAX_SIZE) v.shift();
+      const top = v.at(-1);
+      if (!top) {
+        v.push({ ts: Date.now(), key });
+      } else if (
+        top.key !== key &&
+        key.split(" ").some((k) => !top.key.split(" ").includes(k))
+      ) {
+        // remove duplicate keys
+        v = v.filter((i) => i.key !== key);
+        v.push({ ts: Date.now(), key });
+      } else {
+        top.ts = Date.now();
+      }
+      return v;
+    });
   };
 
-  useLayoutEffect(() => {
+  onMount(() => {
     hide();
-    listen<InputEvent>("input-event", async (event) => {
+    listen<InputEvent>("input-event", (event) => {
       updateKeyMap(event.payload);
-      const key = getKeyMapString();
-      if (key.length) {
-        push(key);
-      }
-      setTimeout(update, 16);
+      const key = keyMapString();
+      if (key.length) push(key);
     });
+
     const handle = setInterval(() => {
+      let v = stack();
       const now = Date.now();
-      const len = stackRef.current.length;
-      stackRef.current = stackRef.current.filter((i) =>
-        (i.ts + MAX_LIVE_TIME) >= now
-      );
+      const len = v.length;
+      v = v.filter((i) => (i.ts + MAX_LIVE_TIME) >= now);
       if (!len) {
         hide();
       }
-      if (len !== stackRef.current.length) {
-        update();
-      }
+      setStack([...v]);
     }, CHECK_INV);
     return () => clearInterval(handle);
-  }, []);
+  });
 
-  const getSize = (scale = 1): { w: number; h: number } => {
-    // const s = stackRef.current
-    // const w = s.reduce((pre, cur) => Math.max(pre, cur.key.length), 0) * (FONT_SIZE) + EVENT_ITEM_PADDING * 2
-    // const h = s.length * (FONT_SIZE + EVENT_ITEM_PADDING * 4 + EVENT_ITEM_MARGIN * 2)
-    // return { w: w * scale, h: h * scale }
-
-    const rect = ref.current?.getBoundingClientRect();
+  const getSize = async (scale = 1): Promise<{ w: number; h: number }> => {
+    const rect = stackDomRef?.getBoundingClientRect();
     if (!rect) {
       return { w: 0, h: 0 };
     }
-    return { w: (rect.width * scale) | 0, h: (rect.height * scale) | 0 };
+    return { w: ((rect.width + BORDER_SIZE * 2) * scale) | 0, h: ((rect.height + BORDER_SIZE * 2) * scale) | 0 };
+
+    // const mon = await primaryMonitor();
+    // if (!mon) return { w: 0, h: 0 };
+    // const itemHeight = FONT_SIZE + EVENT_ITEM_PADDING * 4 +
+    //   EVENT_ITEM_MARGIN * 2;
+    // const maxKeyLength = stack().reduce(
+    //   (max, item) => Math.max(max, item.key.length),
+    //   0,
+    // );
+    // const w = maxKeyLength * FONT_SIZE + EVENT_ITEM_PADDING * 2;
+    // const h = stack().length * itemHeight;
+    // return { w: w * scale, h: h * scale };
   };
-  const update = async () => {
+
+  const updateWindow = async () => {
     const win = getCurrentWindow();
     const mon = await primaryMonitor();
-    if (mon && ref.current) {
-      const { w, h } = getSize(mon.scaleFactor);
+    if (mon) {
+      const { w, h } = await getSize(mon.scaleFactor);
       const size = new PhysicalSize(w, h);
-      win.setSize(size);
-      const winX = mon.size.width - BOTTOM_MARGIN - w;
-      const winY = mon.size.height - BOTTOM_MARGIN - h;
-      const pos = new PhysicalPosition({ x: winX, y: winY });
-      win.setPosition(pos);
-      rerender();
+      await win.setSize(size);
+      const pos = new PhysicalPosition({
+        x: mon.size.width - BOTTOM_MARGIN - w,
+        y: mon.size.height - BOTTOM_MARGIN - h,
+      });
+      await win.setPosition(pos);
     }
   };
 
   const hide = async () => {
     const win = getCurrentWindow();
     const mon = await primaryMonitor();
-    // console.log(win, mon, ref.current);
-    if (mon && ref.current) {
-      const w = mon.size.width;
-      const h = mon.size.height;
-      const pos = new PhysicalPosition({ x: w * 2, y: h * 2 });
-      win.setPosition(pos);
-      const size = new PhysicalSize(w, h);
-      win.setSize(size);
-      rerender();
+    if (mon) {
+      const pos = new PhysicalPosition({
+        x: mon.size.width * 2,
+        y: mon.size.height * 2,
+      });
+      await win.setPosition(pos);
     }
   };
-  const opacity = stackRef.current.length ? "100%" : "0%";
-  const Stack = () => {
-    return (
-      <div ref={ref} className="event-stack" style={{ fontSize: FONT_SIZE }}>
-        {stackRef.current.map((i, k) => (
-          <StackItem item={i} index={k} key={[i.key, i.ts, k].join("-")} />
-        ))}
-      </div>
-    );
-  };
 
-  const StackItem = ({ item, index }: { item: StackItem; index: number }) => {
-    return (
-      <div
-        className="event-item"
-        style={{
-          padding: EVENT_ITEM_PADDING,
-          margin: `${EVENT_ITEM_MARGIN}px 0`,
-        }}
-      >
-        {item.key.split(" ").map((i, k) => (
-          <KeyItem
-            item={i}
-            index={index}
-            key={[item.key, item.ts, i, k].join("-")}
-          />
-        ))}
-      </div>
-    );
-  };
-  const KeyItem = ({ item, index }: { item: string; index: number }) => {
-    const cls =
-      (keyMapRef.current[item] && index === stackRef.current.length - 1)
-        ? "event-text-press"
-        : "";
-    return (
-      <div
-        className={`event-text ${cls}`}
-        style={{
-          padding: `0 ${EVENT_ITEM_PADDING}px`,
-          margin: `${EVENT_ITEM_MARGIN}px 0`,
-        }}
-      >
-        {item}
-      </div>
-    );
-  };
+  createEffect(() => {
+    if (stack().length > 0) {
+      updateWindow();
+    } else {
+      // hide();
+    }
+  });
+
   return (
-    <main className="container" style={{ opacity }}>
-      <Stack />
+    <main class="container" style={{
+      opacity: (stack().length) ? "100%" : "0%",
+      "border-width": `${BORDER_SIZE}px`,
+    }}>
+      <div
+        ref={stackDomRef}
+        class="event-stack"
+        style={{ "font-size": `${FONT_SIZE}px` }}
+      >
+        <For each={stack()}>
+          {(item, index) => (
+            <div
+              class={`event-item animate`}
+              style={{
+                padding: `${EVENT_ITEM_PADDING}px`,
+                margin: `${EVENT_ITEM_MARGIN}px 0`,
+              }}
+            >
+              <For each={item.key.split(" ")}>
+                {(key) => (
+                  <div
+                    class={`event-text ${keyMap()[key] && index() === stack().length - 1
+                      ? "event-text-press"
+                      : ""
+                      }`}
+                    style={{
+                      padding: `0 ${EVENT_ITEM_PADDING}px`,
+                      margin: `${EVENT_ITEM_MARGIN}px 0`,
+                    }}
+                  >
+                    {key}
+                  </div>
+                )}
+              </For>
+            </div>
+          )}
+        </For>
+      </div>
     </main>
   );
 }
