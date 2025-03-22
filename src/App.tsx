@@ -26,8 +26,8 @@ const FONT_SIZE = 24;
 const EVENT_ITEM_PADDING = 12;
 const EVENT_ITEM_MARGIN = 12;
 const BORDER_SIZE = 2;
-const BORDER_COLOR = ""
-const TRANSPARENT_COLOR = ""
+const BORDER_COLOR = "";
+const TRANSPARENT_COLOR = "";
 
 function getKey(s: string): string {
   const map: Record<string, string> = {
@@ -154,7 +154,10 @@ function App() {
     if (!rect) {
       return { w: 0, h: 0 };
     }
-    return { w: ((rect.width + BORDER_SIZE * 2) * scale) | 0, h: ((rect.height + BORDER_SIZE * 2) * scale) | 0 };
+    return {
+      w: ((rect.width + BORDER_SIZE * 2) * scale) | 0,
+      h: ((rect.height + BORDER_SIZE * 2) * scale) | 0,
+    };
 
     // const mon = await primaryMonitor();
     // if (!mon) return { w: 0, h: 0 };
@@ -205,10 +208,13 @@ function App() {
   });
 
   return (
-    <main class="container" style={{
-      opacity: (stack().length) ? "100%" : "0%",
-      "border-width": `${BORDER_SIZE}px`,
-    }}>
+    <main
+      class="container"
+      style={{
+        opacity: (stack().length) ? "100%" : "0%",
+        "border-width": `${BORDER_SIZE}px`,
+      }}
+    >
       <div
         ref={stackDomRef}
         class="event-stack"
@@ -226,10 +232,11 @@ function App() {
               <For each={item.key.split(" ")}>
                 {(key) => (
                   <div
-                    class={`event-text ${keyMap()[key] && index() === stack().length - 1
-                      ? "event-text-press"
-                      : ""
-                      }`}
+                    class={`event-text ${
+                      keyMap()[key] && index() === stack().length - 1
+                        ? "event-text-press"
+                        : ""
+                    }`}
                     style={{
                       padding: `0 ${EVENT_ITEM_PADDING}px`,
                       margin: `${EVENT_ITEM_MARGIN}px 0`,
