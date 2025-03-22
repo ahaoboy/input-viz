@@ -6,6 +6,8 @@ html, body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  pointer-events: none;
+  user-select: none;
 }
 
 .container {
@@ -26,17 +28,16 @@ html, body {
 }
 
 .event-stack {
-  font-size: 24px;
   font-weight: bold;
   display: flex;
+  /* width: 100%; */
+  width: fit-content;
   justify-content: center;
-  align-items: center;
+  align-items: end;
   flex-direction: column;
 }
 
 .event-item {
-  margin: 12px 0;
-  padding: 12px;
   background: black;
   display: flex;
   width: fit-content;
@@ -46,8 +47,6 @@ html, body {
 }
 
 .event-text {
-  margin: 12px 0;
-  padding: 12px;
   background: black;
   display: flex;
   width: fit-content;

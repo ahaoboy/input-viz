@@ -21,11 +21,13 @@ type InputEvent = {
   };
 };
 
-const BAR_HEIGHT = 100;
-const PADDING = BAR_HEIGHT / 2;
+const BOTTOM_MARGIN = 200;
 const STACK_MAX_SIZE = 6;
 const CHECK_INV = 500;
 const MAX_LIVE_TIME = 3000;
+const FONT_SIZE = 24;
+const EVENT_ITEM_PADDING = 12;
+const EVENT_ITEM_MARGIN = 12;
 
 function getKey(s: string): string {
   const map: Record<string, string> = {
@@ -50,6 +52,7 @@ function getKey(s: string): string {
     "KpMultiply": "*",
     "KpDivide": "/",
     "Lock": "NumLock",
+    "AltGr": "Alt",
   };
   if (map[s]) {
     return map[s];
@@ -78,6 +81,9 @@ function getKey(s: string): string {
 function sortBy(s: string) {
   if (s.startsWith("Control")) {
     return 100;
+  }
+  if (s.startsWith("Shift")) {
+    return 90;
   }
   if (s.endsWith("Click")) {
     return 50;
@@ -153,7 +159,10 @@ function App() {
       stackRef.current.push({ ts: Date.now(), key });
       return;
     }
-    if (top.key !== key && !top.key.split(" ").includes(key)) {
+    if (
+      top.key !== key &&
+      key.split(" ").some((k) => !top.key.split(" ").includes(k))
+    ) {
       // remove duplicate keys
       stackRef.current = stackRef.current.filter((i) => i.key !== key);
       stackRef.current.push({ ts: Date.now(), key });
@@ -170,38 +179,47 @@ function App() {
       if (key.length) {
         push(key);
       }
-      update();
+      setTimeout(update, 16);
     });
     const handle = setInterval(() => {
       const now = Date.now();
+      const len = stackRef.current.length;
       stackRef.current = stackRef.current.filter((i) =>
         (i.ts + MAX_LIVE_TIME) >= now
       );
-      if (!stackRef.current.length) {
+      if (!len) {
         hide();
+      }
+      if (len !== stackRef.current.length) {
+        update();
       }
     }, CHECK_INV);
     return () => clearInterval(handle);
   }, []);
 
+  const getSize = (scale = 1): { w: number; h: number } => {
+    // const s = stackRef.current
+    // const w = s.reduce((pre, cur) => Math.max(pre, cur.key.length), 0) * (FONT_SIZE) + EVENT_ITEM_PADDING * 2
+    // const h = s.length * (FONT_SIZE + EVENT_ITEM_PADDING * 4 + EVENT_ITEM_MARGIN * 2)
+    // return { w: w * scale, h: h * scale }
+
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) {
+      return { w: 0, h: 0 };
+    }
+    return { w: (rect.width * scale) | 0, h: (rect.height * scale) | 0 };
+  };
   const update = async () => {
     const win = getCurrentWindow();
     const mon = await primaryMonitor();
-    // console.log(win, mon, ref.current);
     if (mon && ref.current) {
-      const scale = mon.scaleFactor;
-      const rect = ref.current.getBoundingClientRect();
-      const domW = (rect.width * scale) | 0;
-      const domH = (rect.height * scale) | 0;
-      // console.log(domW, domH);
-      const w = mon.size.width;
-      const h = mon.size.height;
-      const winX = w - PADDING * 4 - domW;
-      const winY = h - PADDING * 2 - BAR_HEIGHT - domH;
+      const { w, h } = getSize(mon.scaleFactor);
+      const size = new PhysicalSize(w, h);
+      win.setSize(size);
+      const winX = mon.size.width - BOTTOM_MARGIN - w;
+      const winY = mon.size.height - BOTTOM_MARGIN - h;
       const pos = new PhysicalPosition({ x: winX, y: winY });
       win.setPosition(pos);
-      const size = new PhysicalSize(domW + PADDING * 2, domH + PADDING * 2);
-      win.setSize(size);
       rerender();
     }
   };
@@ -217,14 +235,13 @@ function App() {
       win.setPosition(pos);
       const size = new PhysicalSize(w, h);
       win.setSize(size);
-      // win.setVisibleOnAllWorkspaces(true)
       rerender();
     }
   };
   const opacity = stackRef.current.length ? "100%" : "0%";
   const Stack = () => {
     return (
-      <div ref={ref} className="event-stack">
+      <div ref={ref} className="event-stack" style={{ fontSize: FONT_SIZE }}>
         {stackRef.current.map((i, k) => (
           <StackItem item={i} index={k} key={[i.key, i.ts, k].join("-")} />
         ))}
@@ -234,7 +251,13 @@ function App() {
 
   const StackItem = ({ item, index }: { item: StackItem; index: number }) => {
     return (
-      <div className="event-item">
+      <div
+        className="event-item"
+        style={{
+          padding: EVENT_ITEM_PADDING,
+          margin: `${EVENT_ITEM_MARGIN}px 0`,
+        }}
+      >
         {item.key.split(" ").map((i, k) => (
           <KeyItem
             item={i}
@@ -251,7 +274,13 @@ function App() {
         ? "event-text-press"
         : "";
     return (
-      <div className={`event-text ${cls}`}>
+      <div
+        className={`event-text ${cls}`}
+        style={{
+          padding: `0 ${EVENT_ITEM_PADDING}px`,
+          margin: `${EVENT_ITEM_MARGIN}px 0`,
+        }}
+      >
         {item}
       </div>
     );
