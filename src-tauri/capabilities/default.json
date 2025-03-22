@@ -10,6 +10,10 @@
     "opener:default",
     "core:window:allow-set-size",
     "core:window:allow-set-position",
-    "core:window:allow-set-visible-on-all-workspaces"
+    "core:window:allow-set-visible-on-all-workspaces",
+    "core:app:allow-app-hide",
+    "core:webview:allow-webview-hide",
+    "core:window:allow-hide",
+    "core:window:allow-show"
   ]
 }
