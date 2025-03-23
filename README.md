@@ -1,9 +1,11 @@
-# Tauri + React + Typescript
+# input-viz
 
-visualize your keystrokes and mouse actions.
+input-viz displays keystrokes and mouse actions directly on your desktop.
 
-## Recommended IDE Setup
 
-- [VS Code](https://code.visualstudio.com/) +
-  [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) +
-  [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+![input-viz](./public/input-viz.gif)
+
+
+## Installation
+
+[releases](https://github.com/ahaoboy/input-viz/releases/latest)
