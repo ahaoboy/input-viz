@@ -21,6 +21,10 @@ fn start_monitoring(app_handle: tauri::AppHandle) {
 
 #[tauri::command]
 async fn create_window(app: tauri::AppHandle, label: String) {
+    if app.get_webview_window(&label).is_some() {
+        return;
+    }
+
     let url = format!("index.html#{}", label);
     let _ = tauri::WebviewWindowBuilder::new(
         &app,
