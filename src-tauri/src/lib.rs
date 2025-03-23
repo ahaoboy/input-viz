@@ -26,13 +26,12 @@ async fn create_window(app: tauri::AppHandle, label: String) {
     }
 
     let url = format!("index.html#{}", label);
-    let _ = tauri::WebviewWindowBuilder::new(
+    let mut builder = tauri::WebviewWindowBuilder::new(
         &app,
         label.as_str(),
         tauri::WebviewUrl::App(url.as_str().into()),
     )
     .decorations(false)
-    .transparent(true)
     .background_color(Color(0, 0, 0, 0))
     .position(1000000., 1000000.)
     .inner_size(0., 0.)
@@ -45,9 +44,14 @@ async fn create_window(app: tauri::AppHandle, label: String) {
     .minimizable(false)
     .maximizable(false)
     .focused(false)
-    .shadow(false)
-    .build()
-    .unwrap();
+    .shadow(false);
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        builder = builder.transparent(true);
+    }
+
+    builder.build().unwrap();
 }
 
 use tauri::menu::{Menu, MenuItem};
