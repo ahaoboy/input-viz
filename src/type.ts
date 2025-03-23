@@ -19,6 +19,6 @@ export type InputEvent = {
 
 export type UpdateEvent = {
   item: StackItem;
-  id: string;
+  label: string;
   noColor: boolean;
 };

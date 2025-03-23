@@ -111,15 +111,20 @@ const MEASURE_TEXT_ID = "MEASURE_TEXT_ID";
 function KeyCard() {
   const [keys, setKeys] = createSignal<StackItem["keys"]>([]);
   const [hide, setHide] = createSignal(false);
-  const [noColor, setNoColor] = createSignal(false);
+  const [noColor, setNoColor] = createSignal(true);
   onMount(async () => {
     const win = getCurrentWindow();
-    listen<UpdateEvent>("hide", () => {
+    listen<UpdateEvent>("hide", (e) => {
+      if (e.payload.label !== win.label) {
+        return;
+      }
       setHide(true);
+      setKeys([]);
+      setNoColor(true);
     });
     listen<UpdateEvent>("update", (e) => {
       setHide(false);
-      if (e.payload.id !== win.label) {
+      if (e.payload.label !== win.label) {
         return;
       }
       const item = e.payload.item;
@@ -332,10 +337,10 @@ function App() {
         continue;
       }
       const noColor = i < v.length - 1;
-      win.emitTo(i.toString(), "update", { id: label, item, noColor });
+      await win.emitTo(i.toString(), "update", { label, item, noColor });
       // change size and position at same time
-      win.setPosition(new PhysicalPosition(item.x, item.y));
-      win.setSize(new PhysicalSize(item.w, item.h));
+      await win.setPosition(new PhysicalPosition(item.x, item.y));
+      await win.setSize(new PhysicalSize(item.w, item.h));
       win.show();
       newWindowForItem[itemId] = label!;
     }
@@ -346,11 +351,9 @@ function App() {
         continue;
       }
       win.hide();
-      win.emitTo(label, "hide", { id: label });
+      win.emitTo(label, "hide", { label });
       win.setPosition(new PhysicalPosition(1000_000, 1000_000));
     }
-
-    console.log("newWindowForItem", { ...newWindowForItem });
 
     windowForItem = newWindowForItem;
   });
