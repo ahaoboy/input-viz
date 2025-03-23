@@ -1,33 +1,30 @@
+import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { listen } from "@tauri-apps/api/event";
 import {
+  getAllWindows,
   getCurrentWindow,
+  Monitor,
   PhysicalPosition,
   PhysicalSize,
   primaryMonitor,
 } from "@tauri-apps/api/window";
-import { createMemo, createSignal, For, onMount } from "solid-js";
-
-type InputEvent = {
-  event_type: {
-    ButtonPress?: string;
-    ButtonRelease?: string;
-    KeyPress?: string;
-    KeyRelease?: string;
-    Wheel?: { delta_x: number; delta_y: number };
-  };
-};
+import {
+  Accessor,
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  onMount,
+} from "solid-js";
+import { InputEvent, StackItem, UpdateEvent } from "./type";
 
 const BOTTOM_MARGIN = 200;
 const STACK_MAX_SIZE = 6;
-const CHECK_INV = 100;
+const CHECK_INV = 2000;
 const MAX_LIVE_TIME = 3000;
 const FONT_SIZE = 24;
 const EVENT_ITEM_PADDING = 12;
-const EVENT_ITEM_MARGIN = 12;
-const BORDER_SIZE = 2;
-// const BORDER_COLOR = "";
-// const TRANSPARENT_COLOR = "";
 
 function getKey(s: string): string {
   const map: Record<string, string> = {
@@ -76,19 +73,69 @@ function sortBy(s: string) {
   return 10;
 }
 
-type StackItem = { key: string; ts: number };
+function EventItem(
+  { id, keys }: { id: string; keys: Accessor<StackItem["keys"]> },
+) {
+  return (
+    <div
+      class={`event-item`}
+      id={id}
+      style={{
+        "font-size": `${FONT_SIZE}px`,
+      }}
+    >
+      <For each={keys()}>
+        {({ key, press }) => (
+          <div
+            class={`event-text ${press ? "event-text-press" : ""}`}
+            style={{
+              padding: `${EVENT_ITEM_PADDING}px`,
+            }}
+          >
+            {key}
+          </div>
+        )}
+      </For>
+    </div>
+  );
+}
+const MEASURE_TEXT_ID = "MEASURE_TEXT_ID";
+
+function KeyCard() {
+  const [keys, setKeys] = createSignal<StackItem["keys"]>([]);
+  const [hide, setHide] = createSignal(false);
+  onMount(async () => {
+    const win = getCurrentWindow();
+    listen<UpdateEvent>("hide", () => {
+      setHide(true);
+    });
+    listen<UpdateEvent>("update", (e) => {
+      setHide(false);
+      if (e.payload.id !== win.label) {
+        return;
+      }
+      const item = e.payload.item;
+      setKeys(item.keys);
+    });
+  });
+  return !hide() && <EventItem id="key-card" keys={keys} />;
+}
 
 function App() {
-  let stackDomRef!: HTMLDivElement;
+  if (window.location.hash.length > 0) {
+    return <KeyCard />;
+  }
+
   const [keyMap, setKeyMap] = createSignal<Record<string, boolean>>({});
   const [stack, setStack] = createSignal<StackItem[]>([]);
+  const [keys, setKeys] = createSignal<StackItem["keys"]>([]);
 
   const keyMapString = createMemo(() => {
-    const v: string[] = [];
-    for (const [a, b] of Object.entries(keyMap())) {
-      if (b) v.push(a);
+    const v: StackItem["keys"] = [];
+    for (const [key, press] of Object.entries(keyMap())) {
+      if (press) v.push({ key, press });
     }
-    return v.sort((a, b) => sortBy(b) - sortBy(a)).join(" ");
+    return v.sort((a, b) => sortBy(b.key) - sortBy(a.key));
   });
 
   const updateKeyMap = (e: InputEvent) => {
@@ -110,133 +157,126 @@ function App() {
     setKeyMap(km);
   };
 
-  const push = (key: string) => {
+  const push = async (keys: StackItem["keys"]) => {
     let v = stack();
+    const km = keyMap();
     const now = Date.now();
-    v = v.filter((item) => item.ts + MAX_LIVE_TIME >= now);
-    while (v.length >= STACK_MAX_SIZE) v.shift();
+    v = v.filter((item) => item.ts + MAX_LIVE_TIME > now);
+    for (let i = 0; i < v.length; i++) {
+      for (const k of v[i].keys) {
+        k.press = false;
+      }
+    }
     const top = v.at(-1);
+    const monitor = await primaryMonitor();
+    const size = getSize(monitor?.scaleFactor);
+    const pos = getPosition(monitor, size);
     if (!top) {
-      v.push({ ts: Date.now(), key });
-    } else if (
-      top.key !== key &&
-      key.split(" ").some((k) => !top.key.split(" ").includes(k))
-    ) {
-      // remove duplicate keys
-      v = v.filter((i) => i.key !== key);
-      v.push({ ts: Date.now(), key });
+      v.push({ ...size, ...pos, ts: now, keys });
     } else {
-      top.ts = Date.now();
+      const topStr = top.keys.map((i) => i.key).join(" ");
+      if (
+        topStr === keys.map((i) => i.key).join(" ") ||
+        keys.every(({ key }) => top.keys.find((i) => i.key === key))
+      ) {
+        top.ts = Date.now();
+        for (const i of top.keys) {
+          i.press = km[i.key];
+        }
+      } else {
+        v.push({ ...size, ...pos, ts: now, keys });
+      }
+    }
+
+    while (v.length > STACK_MAX_SIZE) v.shift();
+
+    let offsetY = 0;
+    const winH = monitor?.size.height || 0;
+    for (let i = v.length - 1; i >= 0; i--) {
+      const item = v[i];
+      item.y = winH - item.h - BOTTOM_MARGIN - offsetY;
+      offsetY += item.h + EVENT_ITEM_PADDING * 2;
     }
     setStack([...v]);
-    updateWindow();
   };
 
-  onMount(() => {
-    hide();
-    listen<InputEvent>("input-event", (event) => {
-      updateKeyMap(event.payload);
-      const key = keyMapString();
-      if (key.length) push(key);
-    });
+  const initWindows = async () => {
+    const windows = await getAllWindows();
+    const v = new Array(STACK_MAX_SIZE).fill(0).map((_, k) => k).filter((i) =>
+      !windows.find((w) => w.label === i.toString())
+    );
+    return Promise.all(
+      v.map((i) => invoke("create_window", { label: i.toString() })),
+    );
+  };
 
+  onMount(async () => {
+    await initWindows();
+    listen<InputEvent>("input-event", async (event) => {
+      updateKeyMap(event.payload);
+      const keys = keyMapString();
+      if (keys.length) {
+        setKeys(keys);
+        push(keys);
+      }
+    });
     const handle = setInterval(async () => {
       let v = stack();
       const now = Date.now();
-      const len = v.length;
-      v = v.filter((i) => (i.ts + MAX_LIVE_TIME) >= now);
-      if (!len) {
-        hide();
-      }
+      v = v.filter((i) => (i.ts + MAX_LIVE_TIME) > now);
       setStack([...v]);
-      await updateWindow();
     }, CHECK_INV);
     return () => clearInterval(handle);
   });
 
-  const getSize = async (scale = 1): Promise<{ w: number; h: number }> => {
-    const rect = stackDomRef?.getBoundingClientRect();
+  const getSize = (scale = 1): { w: number; h: number } => {
+    const rect = document.getElementById(MEASURE_TEXT_ID)
+      ?.getBoundingClientRect();
     if (!rect) {
       return { w: 0, h: 0 };
     }
     return {
-      w: ((rect.width + BORDER_SIZE * 2) * scale) | 0,
-      h: ((rect.height + BORDER_SIZE * 2) * scale) | 0,
+      w: ((rect.width) * scale) | 0,
+      h: ((rect.height) * scale) | 0,
     };
   };
 
-  const updateWindow = async () => {
-    const win = getCurrentWindow();
-    const mon = await primaryMonitor();
-    if (mon) {
-      const { w, h } = await getSize(mon.scaleFactor);
-      const size = new PhysicalSize(w, h);
-      await win.setSize(size);
-      const pos = new PhysicalPosition({
-        x: mon.size.width - BOTTOM_MARGIN - w,
-        y: mon.size.height - BOTTOM_MARGIN - h,
-      });
-      await win.setPosition(pos);
+  const getPosition = (
+    monitor: Monitor | null,
+    { w, h }: { w: number; h: number },
+  ): { x: number; y: number } => {
+    if (!monitor) {
+      return { x: 0, y: 0 };
     }
+    const x = monitor.size.width - w - BOTTOM_MARGIN;
+    const y = monitor.size.height - h - BOTTOM_MARGIN;
+    return { x, y };
   };
 
-  const hide = async () => {
-    const win = getCurrentWindow();
-    const mon = await primaryMonitor();
-    if (mon) {
-      const pos = new PhysicalPosition({
-        x: mon.size.width * 2,
-        y: mon.size.height * 2,
-      });
-      await win.setPosition(pos);
+  createEffect(async () => {
+    const v = stack();
+    const windows = await getAllWindows();
+    for (let i = 0; i < STACK_MAX_SIZE; i++) {
+      const item = v[i];
+      const id = i.toString();
+      const win = windows.find((win) => win.label === id);
+      if (!win) {
+        continue;
+      }
+      if (item) {
+        win.emitTo(i.toString(), "update", { id, item });
+        win.setPosition(new PhysicalPosition(item.x, item.y));
+        win.setSize(new PhysicalSize(item.w, item.h));
+        win.show();
+      } else {
+        win.emitTo(i.toString(), "hide", { id });
+        win.setPosition(new PhysicalPosition(1000_000, 1000_000));
+        win.hide();
+      }
     }
-  };
+  });
 
-  return (
-    <main
-      class="container"
-      style={{
-        opacity: (stack().length) ? "100%" : "0%",
-        "border-width": `${BORDER_SIZE}px`,
-      }}
-    >
-      <div
-        ref={stackDomRef}
-        class="event-stack"
-        style={{ "font-size": `${FONT_SIZE}px` }}
-      >
-        <For each={stack()}>
-          {(item, index) => (
-            <div
-              class={`event-item animate`}
-              style={{
-                padding: `${EVENT_ITEM_PADDING}px`,
-                margin: `${EVENT_ITEM_MARGIN}px 0`,
-              }}
-            >
-              <For each={item.key.split(" ")}>
-                {(key) => (
-                  <div
-                    class={`event-text ${
-                      keyMap()[key] && index() === stack().length - 1
-                        ? "event-text-press"
-                        : ""
-                    }`}
-                    style={{
-                      padding: `0 ${EVENT_ITEM_PADDING}px`,
-                      margin: `${EVENT_ITEM_MARGIN}px 0`,
-                    }}
-                  >
-                    {key}
-                  </div>
-                )}
-              </For>
-            </div>
-          )}
-        </For>
-      </div>
-    </main>
-  );
+  return <EventItem id={MEASURE_TEXT_ID} keys={keys} />;
 }
 
 export default App;

@@ -6,26 +6,10 @@ html, body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  /* pointer-events: none; */
+  pointer-events: none;
   user-select: none;
-}
-
-.container {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-  align-items: center;
-  width: 100%;
-  height: 100%;
-  color: white;
-  border-style: solid;
-  border-color: #00000000;
-  box-sizing: border-box;
-}
-
-.container:hover {
-  border-color: deepskyblue;
+  overflow: hidden;
+  color: #00000000;
 }
 
 #root {
@@ -34,23 +18,15 @@ html, body {
   height: 100%;
 }
 
-.event-stack {
-  font-weight: bold;
-  display: flex;
-  /* width: 100%; */
-  width: fit-content;
-  justify-content: center;
-  align-items: end;
-  flex-direction: column;
-}
-
 .event-item {
-  background: black;
+  font-weight: bold;
   display: flex;
   width: fit-content;
   justify-content: center;
   align-items: center;
   flex-direction: row;
+  height: fit-content;
+  color: white;
 }
 
 .event-text {
@@ -63,16 +39,4 @@ html, body {
 
 .event-text-press {
   color: yellow;
-}
-
-.animate {
-  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-}
-
-.show {
-  opacity: 1;
-}
-
-.hide {
-  opacity: 0;
 }
