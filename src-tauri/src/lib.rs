@@ -31,6 +31,7 @@ async fn create_window(app: tauri::AppHandle, label: String) {
         label.as_str(),
         tauri::WebviewUrl::App(url.as_str().into()),
     )
+    .title("input-viz-key")
     .decorations(false)
     .background_color(Color(0, 0, 0, 0))
     .position(1000000., 1000000.)
