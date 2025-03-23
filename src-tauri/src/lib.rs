@@ -1,4 +1,5 @@
 use tauri::tray::TrayIconBuilder;
+use tauri::window::Color;
 use tauri::{AppHandle, Emitter, Manager};
 
 fn start_monitoring(app_handle: tauri::AppHandle) {
@@ -16,6 +17,33 @@ fn start_monitoring(app_handle: tauri::AppHandle) {
             println!("Error: {:?}", error)
         }
     });
+}
+
+#[tauri::command]
+async fn create_window(app: tauri::AppHandle, label: String) {
+    let url = format!("index.html#{}", label);
+    let _ = tauri::WebviewWindowBuilder::new(
+        &app,
+        label.as_str(),
+        tauri::WebviewUrl::App(url.as_str().into()),
+    )
+    .decorations(false)
+    .transparent(true)
+    .background_color(Color(0, 0, 0, 0))
+    .position(1000000., 1000000.)
+    .inner_size(0., 0.)
+    .always_on_top(true)
+    .skip_taskbar(true)
+    .fullscreen(false)
+    .visible(false)
+    .closable(false)
+    .resizable(false)
+    .minimizable(false)
+    .maximizable(false)
+    .focused(false)
+    .shadow(false)
+    .build()
+    .unwrap();
 }
 
 use tauri::menu::{Menu, MenuItem};
@@ -62,7 +90,7 @@ pub fn run() {
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![])
+        .invoke_handler(tauri::generate_handler![create_window])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

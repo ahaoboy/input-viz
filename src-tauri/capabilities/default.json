@@ -3,7 +3,15 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main"
+    "main",
+    "default",
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6"
   ],
   "permissions": [
     "core:default",

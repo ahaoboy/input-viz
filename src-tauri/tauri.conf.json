@@ -17,7 +17,7 @@
         "height": 0,
         "x": 1000000,
         "y": 1000000,
-        "visible": true,
+        "visible": false,
         "fullscreen": false,
         "closable": true,
         "resizable": true,
