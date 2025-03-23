@@ -264,7 +264,9 @@ function App() {
         continue;
       }
       if (item) {
-        win.emitTo(i.toString(), "update", { id, item });
+        // update text first
+        await win.emitTo(i.toString(), "update", { id, item });
+        // change size and position at same time
         win.setPosition(new PhysicalPosition(item.x, item.y));
         win.setSize(new PhysicalSize(item.w, item.h));
         win.show();
