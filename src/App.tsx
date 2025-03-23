@@ -230,6 +230,11 @@ function App() {
       const km = keyMap();
       for (const i of top.keys) {
         i.press = ["WheelDown", "WheelUp"].includes(i.key) ? false : km[i.key];
+        if (
+          ["LeftClick", "RightClick", "WheelClick"].includes(i.key) && km[i.key]
+        ) {
+          top.ts = Date.now();
+        }
       }
     }
     return list;
@@ -281,31 +286,73 @@ function App() {
     return { x, y };
   };
 
+  const getItemId = (item: StackItem) => {
+    return [item.keys.map((i) => i.key).join("_"), item.ts].join("-");
+  };
+
+  let windowForItem: Record<string, string> = {};
   createEffect(async () => {
     const v = stack();
+    const windowLables = new Array(STACK_MAX_SIZE).fill(0).map((_, k) =>
+      k.toString()
+    );
+    const newWindowForItem: Record<string, string> = {};
+    const ids = v.map((i) => getItemId(i));
+    const freeWindow: string[] = [];
+    const reuseWindow: string[] = [];
+    const isReuse = (label: string): boolean => {
+      const itemId = Object.entries(windowForItem).find((i) => i[1] === label)
+        ?.[0];
+      return !!itemId && ids.includes(itemId);
+    };
+
+    for (const label of windowLables) {
+      if (isReuse(label)) {
+        reuseWindow.push(label);
+      } else {
+        freeWindow.push(label);
+      }
+    }
+
     const windows = await getAllWindows();
-    for (let i = 0; i < STACK_MAX_SIZE; i++) {
+    const getLabelById = (id: string) => {
+      const wid = windowForItem[id];
+      if (wid !== undefined && reuseWindow.includes(wid)) {
+        return wid;
+      }
+      return freeWindow.shift();
+    };
+
+    for (let i = 0; i < v.length; i++) {
       const item = v[i];
-      const id = i.toString();
-      const win = windows.find((win) => win.label === id);
+      const itemId = getItemId(item);
+      const label = getLabelById(itemId);
+      const win = windows.find((win) => win.label === label);
       if (!win) {
         continue;
       }
-
       const noColor = i < v.length - 1;
-      if (item) {
-        // update text first
-        await win.emitTo(i.toString(), "update", { id, item, noColor });
-        // change size and position at same time
-        win.setPosition(new PhysicalPosition(item.x, item.y));
-        win.setSize(new PhysicalSize(item.w, item.h));
-        win.show();
-      } else {
-        win.hide();
-        win.emitTo(i.toString(), "hide", { id });
-        win.setPosition(new PhysicalPosition(1000_000, 1000_000));
-      }
+      win.emitTo(i.toString(), "update", { id: label, item, noColor });
+      // change size and position at same time
+      win.setPosition(new PhysicalPosition(item.x, item.y));
+      win.setSize(new PhysicalSize(item.w, item.h));
+      win.show();
+      newWindowForItem[itemId] = label!;
     }
+
+    for (const label of freeWindow) {
+      const win = windows.find((win) => win.label === label);
+      if (!win) {
+        continue;
+      }
+      win.hide();
+      win.emitTo(label, "hide", { id: label });
+      win.setPosition(new PhysicalPosition(1000_000, 1000_000));
+    }
+
+    console.log("newWindowForItem", { ...newWindowForItem });
+
+    windowForItem = newWindowForItem;
   });
 
   return <EventItem id={MEASURE_TEXT_ID} keys={keys} />;
