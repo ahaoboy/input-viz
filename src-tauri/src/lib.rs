@@ -26,7 +26,7 @@ async fn create_window(app: tauri::AppHandle, label: String) {
     }
 
     let url = format!("index.html#{}", label);
-    let mut builder = tauri::WebviewWindowBuilder::new(
+    let builder = tauri::WebviewWindowBuilder::new(
         &app,
         label.as_str(),
         tauri::WebviewUrl::App(url.as_str().into()),
@@ -47,9 +47,7 @@ async fn create_window(app: tauri::AppHandle, label: String) {
     .shadow(false);
 
     #[cfg(not(target_os = "macos"))]
-    {
-        builder = builder.transparent(true);
-    }
+    let builder = builder.transparent(true);
 
     builder.build().unwrap();
 }

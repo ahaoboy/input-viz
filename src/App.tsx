@@ -21,8 +21,9 @@ import { InputEvent, StackItem, UpdateEvent } from "./type";
 
 const BOTTOM_MARGIN = 200;
 const STACK_MAX_SIZE = 6;
-const CHECK_INV = 2000;
+const CHECK_INV = 200;
 const MAX_LIVE_TIME = 3000;
+const REMOVE_INV = 1000;
 const FONT_SIZE = 24;
 const EVENT_ITEM_PADDING = 12;
 
@@ -74,7 +75,11 @@ function sortBy(s: string) {
 }
 
 function EventItem(
-  { id, keys }: { id: string; keys: Accessor<StackItem["keys"]> },
+  { id, keys, noColor }: {
+    noColor?: Accessor<boolean>;
+    id: string;
+    keys: Accessor<StackItem["keys"]>;
+  },
 ) {
   return (
     <div
@@ -87,7 +92,9 @@ function EventItem(
       <For each={keys()}>
         {({ key, press }) => (
           <div
-            class={`event-text ${press ? "event-text-press" : ""}`}
+            class={`event-text ${
+              press && !noColor?.() ? "event-text-press" : ""
+            }`}
             style={{
               padding: `${EVENT_ITEM_PADDING}px`,
             }}
@@ -104,6 +111,7 @@ const MEASURE_TEXT_ID = "MEASURE_TEXT_ID";
 function KeyCard() {
   const [keys, setKeys] = createSignal<StackItem["keys"]>([]);
   const [hide, setHide] = createSignal(false);
+  const [noColor, setNoColor] = createSignal(false);
   onMount(async () => {
     const win = getCurrentWindow();
     listen<UpdateEvent>("hide", () => {
@@ -116,9 +124,10 @@ function KeyCard() {
       }
       const item = e.payload.item;
       setKeys(item.keys);
+      setNoColor(e.payload.noColor);
     });
   });
-  return !hide() && <EventItem id="key-card" keys={keys} />;
+  return !hide() && <EventItem id="key-card" keys={keys} noColor={noColor} />;
 }
 
 function App() {
@@ -161,12 +170,6 @@ function App() {
     let v = stack();
     const km = keyMap();
     const now = Date.now();
-    v = v.filter((item) => item.ts + MAX_LIVE_TIME > now);
-    for (let i = 0; i < v.length; i++) {
-      for (const k of v[i].keys) {
-        k.press = false;
-      }
-    }
     const top = v.at(-1);
     const monitor = await primaryMonitor();
     const size = getSize(monitor?.scaleFactor);
@@ -210,6 +213,28 @@ function App() {
     );
   };
 
+  function remove(v: StackItem[]): StackItem[] {
+    const now = Date.now();
+    const list = [...v];
+    const index = list.findIndex((i) => (i.ts + MAX_LIVE_TIME) < now);
+    if (index !== -1) {
+      list.splice(index, 1);
+    }
+    return list;
+  }
+
+  function check(v: StackItem[]): StackItem[] {
+    const list = [...v];
+    const top = list.at(-1);
+    if (top) {
+      const km = keyMap();
+      for (const i of top.keys) {
+        i.press = ["WheelDown", "WheelUp"].includes(i.key) ? false : km[i.key];
+      }
+    }
+    return list;
+  }
+
   onMount(async () => {
     await initWindows();
     listen<InputEvent>("input-event", async (event) => {
@@ -220,13 +245,16 @@ function App() {
         push(keys);
       }
     });
-    const handle = setInterval(async () => {
-      let v = stack();
-      const now = Date.now();
-      v = v.filter((i) => (i.ts + MAX_LIVE_TIME) > now);
-      setStack([...v]);
+    const handleCheck = setInterval(async () => {
+      setStack(check(stack()));
     }, CHECK_INV);
-    return () => clearInterval(handle);
+    const handleRemove = setInterval(async () => {
+      setStack(remove(stack()));
+    }, REMOVE_INV);
+    return () => {
+      clearInterval(handleCheck);
+      clearInterval(handleRemove);
+    };
   });
 
   const getSize = (scale = 1): { w: number; h: number } => {
@@ -263,17 +291,19 @@ function App() {
       if (!win) {
         continue;
       }
+
+      const noColor = i < v.length - 1;
       if (item) {
         // update text first
-        await win.emitTo(i.toString(), "update", { id, item });
+        await win.emitTo(i.toString(), "update", { id, item, noColor });
         // change size and position at same time
         win.setPosition(new PhysicalPosition(item.x, item.y));
         win.setSize(new PhysicalSize(item.w, item.h));
         win.show();
       } else {
+        win.hide();
         win.emitTo(i.toString(), "hide", { id });
         win.setPosition(new PhysicalPosition(1000_000, 1000_000));
-        win.hide();
       }
     }
   });
