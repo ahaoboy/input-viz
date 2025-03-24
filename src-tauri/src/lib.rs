@@ -3,7 +3,7 @@ use tauri::window::Color;
 use tauri::{AppHandle, Emitter, Manager};
 
 fn start_monitoring(app_handle: tauri::AppHandle) {
-    use rdev::{listen, EventType};
+    use rdev::{EventType, listen};
     std::thread::spawn(move || {
         if let Err(error) = listen(move |event| {
             // println!("My callback {:?}", event);
@@ -34,8 +34,8 @@ async fn create_window(app: tauri::AppHandle, label: String) {
     .title("input-viz-key")
     .decorations(false)
     .background_color(Color(0, 0, 0, 0))
-    .position(1000000., 1000000.)
-    .inner_size(0., 0.)
+    .position(0., 0.)
+    .inner_size(1., 1.)
     .always_on_top(true)
     .skip_taskbar(true)
     .fullscreen(false)

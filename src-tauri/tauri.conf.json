@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "input-viz",
-        "width": 0,
-        "height": 0,
-        "x": 1000000,
-        "y": 1000000,
+        "width": 1,
+        "height": 1,
+        "x": 0,
+        "y": 0,
         "visible": false,
         "fullscreen": false,
         "closable": true,

@@ -8,6 +8,7 @@ import {
   PhysicalPosition,
   PhysicalSize,
   primaryMonitor,
+  Window,
 } from "@tauri-apps/api/window";
 import {
   Accessor,
@@ -143,6 +144,7 @@ function App() {
   const [keyMap, setKeyMap] = createSignal<Record<string, boolean>>({});
   const [stack, setStack] = createSignal<StackItem[]>([]);
   const [keys, setKeys] = createSignal<StackItem["keys"]>([]);
+  const allWindows: Window[] = [];
 
   const keyMapString = createMemo(() => {
     const v: StackItem["keys"] = [];
@@ -210,12 +212,16 @@ function App() {
 
   const initWindows = async () => {
     const windows = await getAllWindows();
-    const v = new Array(STACK_MAX_SIZE).fill(0).map((_, k) => k).filter((i) =>
-      !windows.find((w) => w.label === i.toString())
-    );
-    return Promise.all(
+    const v = new Array(STACK_MAX_SIZE * 2).fill(0).map((_, k) => k).filter((
+      i,
+    ) => !windows.find((w) => w.label === i.toString()));
+    await Promise.all(
       v.map((i) => invoke("create_window", { label: i.toString() })),
     );
+
+    for (const i of await getAllWindows()) {
+      allWindows.push(i);
+    }
   };
 
   function remove(v: StackItem[]): StackItem[] {
@@ -296,7 +302,7 @@ function App() {
   };
 
   let windowForItem: Record<string, string> = {};
-  createEffect(async () => {
+  createEffect(() => {
     const v = stack();
     const windowLables = new Array(STACK_MAX_SIZE).fill(0).map((_, k) =>
       k.toString()
@@ -319,7 +325,6 @@ function App() {
       }
     }
 
-    const windows = await getAllWindows();
     const getLabelById = (id: string) => {
       const wid = windowForItem[id];
       if (wid !== undefined && reuseWindow.includes(wid)) {
@@ -332,27 +337,25 @@ function App() {
       const item = v[i];
       const itemId = getItemId(item);
       const label = getLabelById(itemId);
-      const win = windows.find((win) => win.label === label);
+      const win = allWindows.find((win) => win.label === label);
       if (!win) {
         continue;
       }
       const noColor = i < v.length - 1;
-      await win.emitTo(i.toString(), "update", { label, item, noColor });
-      // change size and position at same time
-      await win.setPosition(new PhysicalPosition(item.x, item.y));
-      await win.setSize(new PhysicalSize(item.w, item.h));
+      win.emitTo(i.toString(), "update", { label, item, noColor });
+      win.setSize(new PhysicalSize(item.w, item.h));
+      win.setPosition(new PhysicalPosition(item.x, item.y));
       win.show();
       newWindowForItem[itemId] = label!;
     }
 
     for (const label of freeWindow) {
-      const win = windows.find((win) => win.label === label);
+      const win = allWindows.find((win) => win.label === label);
       if (!win) {
         continue;
       }
       win.hide();
       win.emitTo(label, "hide", { label });
-      win.setPosition(new PhysicalPosition(1000_000, 1000_000));
     }
 
     windowForItem = newWindowForItem;

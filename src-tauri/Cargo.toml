@@ -1,9 +1,9 @@
 [package]
 name = "input-viz"
 version = "0.1.0"
-description = "A Tauri App"
+description = "input-viz displays keystrokes and mouse actions directly on your desktop"
 authors = ["you"]
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -22,7 +22,12 @@ tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-rdev = { version = "*", features = ["serialize"] }
+
+# rdev = { version = "*", features = ["serialize"] }
+# https://github.com/Narsil/rdev/pull/153
+rdev = { git = "https://github.com/ahaoboy/rdev", branch = "patch-1", features = [
+  "serialize",
+] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-positioner = "2"
