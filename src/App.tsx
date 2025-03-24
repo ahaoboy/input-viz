@@ -113,7 +113,7 @@ function KeyCard() {
   const [keys, setKeys] = createSignal<StackItem["keys"]>([]);
   const [hide, setHide] = createSignal(false);
   const [noColor, setNoColor] = createSignal(true);
-  onMount(async () => {
+  onMount(() => {
     const win = getCurrentWindow();
     listen<UpdateEvent>("hide", (e) => {
       if (e.payload.label !== win.label) {
@@ -174,7 +174,7 @@ function App() {
   };
 
   const push = async (keys: StackItem["keys"]) => {
-    let v = stack();
+    const v = stack();
     const km = keyMap();
     const now = Date.now();
     const top = v.at(-1);
@@ -212,7 +212,7 @@ function App() {
 
   const initWindows = async () => {
     const windows = await getAllWindows();
-    const v = new Array(STACK_MAX_SIZE * 2).fill(0).map((_, k) => k).filter((
+    const v = new Array(STACK_MAX_SIZE).fill(0).map((_, k) => k).filter((
       i,
     ) => !windows.find((w) => w.label === i.toString()));
     await Promise.all(
@@ -253,7 +253,7 @@ function App() {
 
   onMount(async () => {
     await initWindows();
-    listen<InputEvent>("input-event", async (event) => {
+    listen<InputEvent>("input-event", (event) => {
       updateKeyMap(event.payload);
       const keys = keyMapString();
       if (keys.length) {
@@ -261,10 +261,10 @@ function App() {
         push(keys);
       }
     });
-    const handleCheck = setInterval(async () => {
+    const handleCheck = setInterval(() => {
       setStack(check(stack()));
     }, CHECK_INV);
-    const handleRemove = setInterval(async () => {
+    const handleRemove = setInterval(() => {
       setStack(remove(stack()));
     }, REMOVE_INV);
     return () => {
@@ -304,6 +304,9 @@ function App() {
   let windowForItem: Record<string, string> = {};
   createEffect(() => {
     const v = stack();
+    if (allWindows.length < STACK_MAX_SIZE) {
+      return;
+    }
     const windowLables = new Array(STACK_MAX_SIZE).fill(0).map((_, k) =>
       k.toString()
     );
