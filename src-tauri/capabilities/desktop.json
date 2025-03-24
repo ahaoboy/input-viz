@@ -9,8 +9,5 @@
     "*"
   ],
   "permissions": [
-    "positioner:default",
-    "updater:default",
-    "updater:default"
   ]
 }

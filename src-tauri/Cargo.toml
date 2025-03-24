@@ -28,9 +28,9 @@ rdev = { git = "https://github.com/ahaoboy/rdev", branch = "patch-1", features =
   "serialize",
 ] }
 
-[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-positioner = "2"
-tauri-plugin-updater = "2"
+# https://github.com/ebarnard/rust-plist/issues/151
+deranged = "=0.4.0"
+
 
 [profile.release]
 debug = false
