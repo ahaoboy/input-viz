@@ -6,4 +6,9 @@ input-viz displays keystrokes and mouse actions directly on your desktop.
 
 ## Installation
 
-[releases](https://github.com/ahaoboy/input-viz/releases/latest)
+You can download the latest version of `input-viz` from the
+[Github Releases](https://github.com/ahaoboy/input-viz/releases/latest)
+
+## Inspired
+
+https://github.com/mulaRahul/keyviz
