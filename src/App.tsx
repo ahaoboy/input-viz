@@ -94,7 +94,7 @@ function EventItem(
         {({ key, press }) => (
           <div
             class={`event-text ${
-              press && !noColor?.() ? "event-text-press" : ""
+              (press && !noColor?.()) ? "event-text-press" : ""
             }`}
             style={{
               padding: `${EVENT_ITEM_PADDING}px`,
@@ -111,7 +111,6 @@ const MEASURE_TEXT_ID = "MEASURE_TEXT_ID";
 
 function KeyCard() {
   const [keys, setKeys] = createSignal<StackItem["keys"]>([]);
-  const [hide, setHide] = createSignal(false);
   const [noColor, setNoColor] = createSignal(true);
   onMount(() => {
     const win = getCurrentWindow();
@@ -119,12 +118,10 @@ function KeyCard() {
       if (e.payload.label !== win.label) {
         return;
       }
-      setHide(true);
       setKeys([]);
       setNoColor(true);
     });
     listen<UpdateEvent>("update", (e) => {
-      setHide(false);
       if (e.payload.label !== win.label) {
         return;
       }
@@ -133,7 +130,7 @@ function KeyCard() {
       setNoColor(e.payload.noColor);
     });
   });
-  return !hide() && <EventItem id="key-card" keys={keys} noColor={noColor} />;
+  return <EventItem id="key-card" keys={keys} noColor={noColor} />;
 }
 
 function App() {
@@ -144,7 +141,10 @@ function App() {
   const [keyMap, setKeyMap] = createSignal<Record<string, boolean>>({});
   const [stack, setStack] = createSignal<StackItem[]>([]);
   const [keys, setKeys] = createSignal<StackItem["keys"]>([]);
+  const [hideUI, setHideUI] = createSignal(false);
   const allWindows: Window[] = [];
+
+  let keyId = 0;
 
   const keyMapString = createMemo(() => {
     const v: StackItem["keys"] = [];
@@ -182,7 +182,7 @@ function App() {
     const size = getSize(monitor?.scaleFactor);
     const pos = getPosition(monitor, size);
     if (!top) {
-      v.push({ ...size, ...pos, ts: now, keys });
+      v.push({ ...size, ...pos, ts: now, keys, id: keyId++ });
     } else {
       const topStr = top.keys.map((i) => i.key).join(" ");
       if (
@@ -194,7 +194,7 @@ function App() {
           i.press = km[i.key];
         }
       } else {
-        v.push({ ...size, ...pos, ts: now, keys });
+        v.push({ ...size, ...pos, ts: now, keys, id: keyId++ });
       }
     }
 
@@ -261,6 +261,15 @@ function App() {
         push(keys);
       }
     });
+
+    listen<UpdateEvent>("hide-ui", () => {
+      setHideUI(true);
+    });
+
+    listen<UpdateEvent>("show-ui", () => {
+      setHideUI(false);
+    });
+
     const handleCheck = setInterval(() => {
       setStack(check(stack()));
     }, CHECK_INV);
@@ -298,42 +307,48 @@ function App() {
   };
 
   const getItemId = (item: StackItem) => {
-    return [item.keys.map((i) => i.key).join("_"), item.ts].join("-");
+    return [item.keys.map((i) => i.key).join("_"), item.ts, item.id].join("-");
   };
 
   let windowForItem: Record<string, string> = {};
   createEffect(() => {
     const v = stack();
-    if (allWindows.length < STACK_MAX_SIZE) {
+    if (hideUI()) {
+      return;
+    }
+    if (allWindows.length < STACK_MAX_SIZE + 1) {
       return;
     }
     const windowLables = new Array(STACK_MAX_SIZE).fill(0).map((_, k) =>
       k.toString()
     );
     const newWindowForItem: Record<string, string> = {};
-    const ids = v.map((i) => getItemId(i));
-    const freeWindow: string[] = [];
-    const reuseWindow: string[] = [];
+    const itemIdList = v.map((i) => getItemId(i));
+    const freeWindowList: string[] = [];
+    const reuseWindowList: string[] = [];
     const isReuse = (label: string): boolean => {
-      const itemId = Object.entries(windowForItem).find((i) => i[1] === label)
-        ?.[0];
-      return !!itemId && ids.includes(itemId);
+      for (const itemId of itemIdList) {
+        if (windowForItem[itemId] === label) {
+          return true;
+        }
+      }
+      return false;
     };
 
     for (const label of windowLables) {
       if (isReuse(label)) {
-        reuseWindow.push(label);
+        reuseWindowList.push(label);
       } else {
-        freeWindow.push(label);
+        freeWindowList.push(label);
       }
     }
 
-    const getLabelById = (id: string) => {
-      const wid = windowForItem[id];
-      if (wid !== undefined && reuseWindow.includes(wid)) {
-        return wid;
+    const getLabelById = (itemId: string) => {
+      const label = windowForItem[itemId];
+      if (label !== undefined && reuseWindowList.includes(label)) {
+        return label;
       }
-      return freeWindow.shift();
+      return freeWindowList.shift();
     };
 
     for (let i = 0; i < v.length; i++) {
@@ -341,7 +356,7 @@ function App() {
       const itemId = getItemId(item);
       const label = getLabelById(itemId);
       const win = allWindows.find((win) => win.label === label);
-      if (!win) {
+      if (!win || !label) {
         continue;
       }
       const noColor = i < v.length - 1;
@@ -352,7 +367,7 @@ function App() {
       newWindowForItem[itemId] = label!;
     }
 
-    for (const label of freeWindow) {
+    for (const label of freeWindowList) {
       const win = allWindows.find((win) => win.label === label);
       if (!win) {
         continue;
@@ -362,6 +377,24 @@ function App() {
     }
 
     windowForItem = newWindowForItem;
+
+    //Ideally, the simplest way would be used, but unfortunately, this implementation will flicker
+    // so we can only reuse the same text as much as possible to reduce re-rendering.
+    // for (let i = 0; i < STACK_MAX_SIZE; i++) {
+    //   const label = i.toString()
+    //   const item = v[i]
+    //   const win = allWindows.find((win) => win.label === label)!;
+    //   if (item) {
+    //     const noColor = i < v.length - 1;
+    //     win.emitTo(i.toString(), "update", { label, item, noColor });
+    //     win.setSize(new PhysicalSize(item.w, item.h));
+    //     win.setPosition(new PhysicalPosition(item.x, item.y));
+    //     win.show();
+    //   } else {
+    //     win.hide();
+    //     win.emitTo(label, "hide", { label });
+    //   }
+    // }
   });
 
   return <EventItem id={MEASURE_TEXT_ID} keys={keys} />;

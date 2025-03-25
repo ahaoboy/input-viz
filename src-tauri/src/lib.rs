@@ -75,11 +75,21 @@ pub fn run() {
                             app.exit(0);
                         }
                         "show" => {
-                            for i in app.webview_windows() {
-                                i.1.show().expect("failed to show webview_window");
+                            if let Some(app) = app.get_webview_window("main") {
+                                app.emit("show-ui", ()).expect("failed to emit show-ui");
+                            }
+
+                            for (label, win) in app.webview_windows() {
+                                if label == "main" {
+                                    continue;
+                                }
+                                win.show().expect("failed to show webview_window");
                             }
                         }
                         "hide" => {
+                            if let Some(app) = app.get_webview_window("main") {
+                                app.emit("hide-ui", ()).expect("failed to emit hide-ui");
+                            }
                             for i in app.webview_windows() {
                                 i.1.hide().expect("failed to hide webview_window");
                             }

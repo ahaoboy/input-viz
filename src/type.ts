@@ -5,6 +5,7 @@ export type StackItem = {
   h: number;
   keys: { key: string; press: boolean }[];
   ts: number;
+  id: number;
 };
 
 export type InputEvent = {
