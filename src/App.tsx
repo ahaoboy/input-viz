@@ -16,6 +16,7 @@ import {
   createMemo,
   createSignal,
   For,
+  onCleanup,
   onMount,
 } from "solid-js";
 import { InputEvent, StackItem, UpdateEvent } from "./type";
@@ -112,22 +113,27 @@ const MEASURE_TEXT_ID = "MEASURE_TEXT_ID";
 function KeyCard() {
   const [keys, setKeys] = createSignal<StackItem["keys"]>([]);
   const [noColor, setNoColor] = createSignal(true);
-  onMount(() => {
+  onMount(async () => {
     const win = getCurrentWindow();
-    listen<UpdateEvent>("hide", (e) => {
+    const hideHandle = await listen<UpdateEvent>("hide", (e) => {
       if (e.payload.label !== win.label) {
         return;
       }
       setKeys([]);
       setNoColor(true);
     });
-    listen<UpdateEvent>("update", (e) => {
+    const updateHandle = await listen<UpdateEvent>("update", (e) => {
       if (e.payload.label !== win.label) {
         return;
       }
       const item = e.payload.item;
       setKeys(item.keys);
       setNoColor(e.payload.noColor);
+    });
+
+    onCleanup(() => {
+      hideHandle();
+      updateHandle();
     });
   });
   return <EventItem id="key-card" keys={keys} noColor={noColor} />;
@@ -253,7 +259,7 @@ function App() {
 
   onMount(async () => {
     await initWindows();
-    listen<InputEvent>("input-event", (event) => {
+    const inputHandle = await listen<InputEvent>("input-event", (event) => {
       updateKeyMap(event.payload);
       const keys = keyMapString();
       if (keys.length) {
@@ -262,11 +268,11 @@ function App() {
       }
     });
 
-    listen<UpdateEvent>("hide-ui", () => {
+    const hideHandle = await listen<UpdateEvent>("hide-ui", () => {
       setHideUI(true);
     });
 
-    listen<UpdateEvent>("show-ui", () => {
+    const showHanlde = await listen<UpdateEvent>("show-ui", () => {
       setHideUI(false);
     });
 
@@ -276,10 +282,13 @@ function App() {
     const handleRemove = setInterval(() => {
       setStack(remove(stack()));
     }, REMOVE_INV);
-    return () => {
+    onCleanup(() => {
       clearInterval(handleCheck);
       clearInterval(handleRemove);
-    };
+      inputHandle();
+      hideHandle();
+      showHanlde();
+    });
   });
 
   const getSize = (scale = 1): { w: number; h: number } => {
