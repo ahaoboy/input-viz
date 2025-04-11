@@ -1,6 +1,6 @@
 [package]
 name = "input-viz"
-version = "0.1.0"
+version = "0.1.1"
 description = "input-viz displays keystrokes and mouse actions directly on your desktop"
 authors = ["ahaoboy"]
 edition = "2024"
