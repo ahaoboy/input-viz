@@ -27,9 +27,7 @@ serde_json = "1"
 
 # rdev = { version = "*", features = ["serialize"] }
 # https://github.com/Narsil/rdev/pull/153
-rdev = { git = "https://github.com/ahaoboy/rdev", branch = "patch-1", features = [
-  "serialize",
-] }
+rdev = { git = "https://github.com/Narsil/rdev", features = ["serialize"] }
 
 # https://github.com/ebarnard/rust-plist/issues/151
 deranged = "=0.4.0"

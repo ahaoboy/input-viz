@@ -14,7 +14,7 @@ fn start_monitoring(app_handle: tauri::AppHandle) {
                 }
             }
         }) {
-            println!("Error: {:?}", error)
+            println!("Error: {error:?}")
         }
     });
 }
@@ -25,7 +25,7 @@ async fn create_window(app: tauri::AppHandle, label: String) {
         return;
     }
 
-    let url = format!("index.html#{}", label);
+    let url = format!("index.html#{label}");
     let builder = tauri::WebviewWindowBuilder::new(
         &app,
         label.as_str(),
