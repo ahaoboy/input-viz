@@ -1,6 +1,6 @@
 [package]
 name = "input-viz"
-version = "0.1.1"
+version = "0.1.2"
 description = "input-viz displays keystrokes and mouse actions directly on your desktop"
 authors = ["ahaoboy"]
 edition = "2024"
@@ -48,3 +48,4 @@ inherits = 'release'
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
