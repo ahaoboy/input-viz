@@ -1,0 +1,68 @@
+name: build
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_TERM_QUIET: true
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -CeEuo pipefail {0}
+
+jobs:
+  rust-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt,clippy
+          rustflags: "-A warnings"
+          toolchain: "stable"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: install
+        run: |
+          pnpm install
+      - name: build
+        run: |
+          pnpm run tauri build
+      - name: zip
+        run: |
+          for item in msi nsis; do
+            mkdir ./$item
+            cp -r ./src-tauri/target/release/bundle/$item ./$item
+            cd ./$item
+            7z a -tzip "../$item.zip" . -r
+            cd ..
+          done
+      - name: Upload nsis
+        uses: actions/upload-artifact@v4
+        with:
+          name: nsis
+          path: ./nsis.zip
+      - name: Upload msi
+        uses: actions/upload-artifact@v4
+        with:
+          name: msi
+          path: ./msi.zip
