@@ -427,7 +427,6 @@ function App() {
   onMount(async () => {
     await initWindows();
     const inputHandle = await listen<InputEvent>("input-event", (event) => {
-      console.log("input event", event.payload);
       updateKeyMap(event.payload);
       const keys = keyMapString();
       if (keys.length) {
@@ -437,7 +436,6 @@ function App() {
     });
 
     const gamepadHandle = await listen<PadEvent>("gamepad-event", (event) => {
-      console.log("gamepad event", event.payload);
       updateGamepadState(event.payload);
       const keys = gamepadKeyMapString();
       const gp = gamepadState();
