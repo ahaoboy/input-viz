@@ -1,6 +1,8 @@
 use tauri::tray::TrayIconBuilder;
 use tauri::window::Color;
 use tauri::{AppHandle, Emitter, Manager};
+mod pad;
+use pad::start_gamepad;
 
 fn start_monitoring(app_handle: tauri::AppHandle) {
     use rdev::{EventType, listen};
@@ -103,7 +105,10 @@ pub fn run() {
                 .build(app);
 
             start_monitoring(app.app_handle().clone());
-
+            let e = start_gamepad(app.app_handle().clone());
+            if let Err(err) = e {
+                println!("Failed to start gamepad monitoring: {}", err);
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![create_window])

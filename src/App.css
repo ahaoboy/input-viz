@@ -1,4 +1,5 @@
-html, body {
+html,
+body {
   padding: 0;
   margin: 0;
   background: #00000000;
@@ -10,6 +11,11 @@ html, body {
   user-select: none;
   overflow: hidden;
   color: #00000000;
+}
+
+@font-face {
+  font-family: "FiraCode Nerd Font Mono";
+  src: url("../public/FiraCodeNerdFontMono-Regular.ttf");
 }
 
 #root {
@@ -39,4 +45,48 @@ html, body {
 
 .event-text-press {
   color: yellow;
+}
+
+/* Gamepad button with circle border */
+.gamepad-button {
+  border-radius: 50%;
+  border: 2px solid white;
+  min-width: 24px;
+  min-height: 24px;
+  text-align: center;
+  font-family: "FiraCode Nerd Font Mono";
+}
+
+/* Special icon buttons (Back, Start, Guide) with 1.5x font size */
+.gamepad-icon-button {
+  font-size: 1.25em;
+}
+
+/* Stick indicator container */
+.stick-indicator {
+  position: relative;
+  border: 2px solid;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 4px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* Stick center dot */
+.stick-dot {
+  border-radius: 50%;
+  position: absolute;
+  transition: transform 0.05s ease-out;
+}
+
+/* Key card container for stick + buttons layout */
+.key-card-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
 }
