@@ -258,7 +258,7 @@ function App() {
 
   // Update gamepad state from PadEvent
   const updateGamepadState = (e: PadEvent) => {
-    console.log("updateGamepadState ", e);
+    // console.log("updateGamepadState ", e.event_type);
     const state = { ...gamepadState() };
     const eventType = e.event_type;
 
@@ -295,7 +295,7 @@ function App() {
     } else if (eventType.button_release === "RightStick") {
       state.rightStick = { ...state.rightStick, pressed: false };
     }
-    console.log("updateGamepadState state", state);
+    // console.log("updateGamepadState state", state);
 
     setGamepadState(state);
   };
