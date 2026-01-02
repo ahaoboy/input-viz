@@ -31,7 +31,9 @@ rdev = { git = "https://github.com/Narsil/rdev", features = ["serialize"] }
 
 # https://github.com/ebarnard/rust-plist/issues/151
 deranged = "=0.4.0"
-
+# sdl2 = { version = "0.38.0", features = ["bundled", "static-link"] }
+sdl2 = { version = "0.38.0" }
+anyhow = "1"
 
 [profile.release]
 debug = false

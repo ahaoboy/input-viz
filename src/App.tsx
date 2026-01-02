@@ -19,7 +19,7 @@ import {
   onCleanup,
   onMount,
 } from "solid-js";
-import { InputEvent, StackItem, UpdateEvent } from "./type";
+import { InputEvent, StackItem, UpdateEvent, PadEvent, GamepadState, StickState } from "./type";
 
 const BOTTOM_MARGIN = 200;
 const STACK_MAX_SIZE = 6;
@@ -92,11 +92,9 @@ function EventItem(
       }}
     >
       <For each={keys()}>
-        {({ key, press }) => (
+        {({ key, press, isGamepad, isIconButton }) => (
           <div
-            class={`event-text ${
-              (press && !noColor?.()) ? "event-text-press" : ""
-            }`}
+            class={`event-text ${(press && !noColor?.()) ? "event-text-press" : ""} ${isGamepad ? "gamepad-button" : ""} ${isIconButton ? "gamepad-icon-button" : ""}`}
             style={{
               padding: `${EVENT_ITEM_PADDING}px`,
             }}
@@ -110,9 +108,52 @@ function EventItem(
 }
 const MEASURE_TEXT_ID = "MEASURE_TEXT_ID";
 
+// Stick indicator component for visualizing analog stick position
+const STICK_SIZE = 48;
+const STICK_DOT_SIZE = 12;
+
+function StickIndicator(
+  { stick, color, noColor }: {
+    stick: Accessor<StickState>;
+    color: string;
+    noColor?: Accessor<boolean>;
+  },
+) {
+  const dotX = () => (stick().x * (STICK_SIZE / 2 - STICK_DOT_SIZE / 2));
+  const dotY = () => (stick().y * (STICK_SIZE / 2 - STICK_DOT_SIZE / 2));
+  const isPressed = () => stick().pressed;
+  const isActive = () => Math.abs(stick().x) > 0.01 || Math.abs(stick().y) > 0.01 || isPressed();
+
+  return (
+    <div
+      class="stick-indicator"
+      style={{
+        width: `${STICK_SIZE}px`,
+        height: `${STICK_SIZE}px`,
+        "border-color": noColor?.() ? "white" : color,
+        display: isActive() ? "flex" : "none",
+      }}
+    >
+      <div
+        class="stick-dot"
+        style={{
+          width: `${STICK_DOT_SIZE}px`,
+          height: `${STICK_DOT_SIZE}px`,
+          transform: `translate(${dotX()}px, ${dotY()}px)`,
+          "background-color": (isPressed() && !noColor?.()) ? "red" : (noColor?.() ? "white" : color),
+        }}
+      />
+    </div>
+  );
+}
+
 function KeyCard() {
   const [keys, setKeys] = createSignal<StackItem["keys"]>([]);
   const [noColor, setNoColor] = createSignal(true);
+  const [leftStick, setLeftStick] = createSignal<StickState>({ x: 0, y: 0, pressed: false });
+  const [rightStick, setRightStick] = createSignal<StickState>({ x: 0, y: 0, pressed: false });
+  const [hasStickData, setHasStickData] = createSignal(false);
+
   onMount(async () => {
     const win = getCurrentWindow();
     const hideHandle = await listen<UpdateEvent>("hide", (e) => {
@@ -121,6 +162,9 @@ function KeyCard() {
       }
       setKeys([]);
       setNoColor(true);
+      setLeftStick({ x: 0, y: 0, pressed: false });
+      setRightStick({ x: 0, y: 0, pressed: false });
+      setHasStickData(false);
     });
     const updateHandle = await listen<UpdateEvent>("update", (e) => {
       if (e.payload.label !== win.label) {
@@ -129,6 +173,14 @@ function KeyCard() {
       const item = e.payload.item;
       setKeys(item.keys);
       setNoColor(e.payload.noColor);
+      if (item.leftStick) {
+        setLeftStick(item.leftStick);
+        setHasStickData(true);
+      }
+      if (item.rightStick) {
+        setRightStick(item.rightStick);
+        setHasStickData(true);
+      }
     });
 
     onCleanup(() => {
@@ -136,7 +188,13 @@ function KeyCard() {
       updateHandle();
     });
   });
-  return <EventItem id="key-card" keys={keys} noColor={noColor} />;
+  return (
+    <div class="key-card-container">
+      {hasStickData() && <StickIndicator stick={leftStick} color="#4CAF50" noColor={noColor} />}
+      <EventItem id="key-card" keys={keys} noColor={noColor} />
+      {hasStickData() && <StickIndicator stick={rightStick} color="#2196F3" noColor={noColor} />}
+    </div>
+  );
 }
 
 function App() {
@@ -145,6 +203,11 @@ function App() {
   }
 
   const [keyMap, setKeyMap] = createSignal<Record<string, boolean>>({});
+  const [gamepadState, setGamepadState] = createSignal<GamepadState>({
+    buttons: {},
+    leftStick: { x: 0, y: 0, pressed: false },
+    rightStick: { x: 0, y: 0, pressed: false },
+  });
   const [stack, setStack] = createSignal<StackItem[]>([]);
   const [keys, setKeys] = createSignal<StackItem["keys"]>([]);
   const [hideUI, setHideUI] = createSignal(false);
@@ -159,6 +222,83 @@ function App() {
     }
     return v.sort((a, b) => sortBy(b.key) - sortBy(a.key));
   });
+
+  // Gamepad button display mapping (special symbols for certain buttons)
+  const gamepadButtonDisplay: Record<string, string> = {
+    Back: "󰹰",      // Xbox back/view button
+    Start: "󰹯",     // Xbox start/menu button
+    Guide: "󰖹",     // Xbox button
+    DPadUp: "󰁝",    // D-Pad up arrow
+    DPadDown: "󰁅",  // D-Pad down arrow
+    DPadLeft: "󰁍",  // D-Pad left arrow
+    DPadRight: "󰁔", // D-Pad right arrow
+  };
+
+  // Buttons that use special icon symbols (need larger font)
+  const gamepadIconButtons = Object.values(gamepadButtonDisplay);
+
+  // Buttons to ignore in text display (handled visually elsewhere)
+  const ignoredGamepadButtons = ["LeftStick", "RightStick"];
+
+  // Gamepad button map to display string (with circle indicator)
+  const gamepadKeyMapString = createMemo(() => {
+    const v: StackItem["keys"] = [];
+    const state = gamepadState();
+    for (const [key, press] of Object.entries(state.buttons)) {
+      // Skip stick buttons (shown via stick indicator)
+      if (ignoredGamepadButtons.includes(key)) continue;
+      if (press) {
+        const displayKey = gamepadButtonDisplay[key] || key;
+        const isIconButton = gamepadIconButtons.includes(displayKey);
+        v.push({ key: displayKey, press, isGamepad: true, isIconButton });
+      }
+    }
+    return v;
+  });
+
+  // Update gamepad state from PadEvent
+  const updateGamepadState = (e: PadEvent) => {
+    console.log("updateGamepadState ", e);
+    const state = { ...gamepadState() };
+    const eventType = e.event_type;
+
+    if (eventType.button_press) {
+      state.buttons = { ...state.buttons, [eventType.button_press]: true };
+    } else if (eventType.button_release) {
+      state.buttons = { ...state.buttons, [eventType.button_release]: false };
+    } else if (eventType.axis_motion) {
+      const { axis, value } = eventType.axis_motion;
+
+      // Handle triggers as buttons (non-zero = pressed)
+      if (axis === "LT" || axis === "RT") {
+        state.buttons = { ...state.buttons, [axis]: value > 0.1 };
+      }
+      // Handle stick axes
+      else if (axis === "LeftX") {
+        state.leftStick = { ...state.leftStick, x: value };
+      } else if (axis === "LeftY") {
+        state.leftStick = { ...state.leftStick, y: value };
+      } else if (axis === "RightX") {
+        state.rightStick = { ...state.rightStick, x: value };
+      } else if (axis === "RightY") {
+        state.rightStick = { ...state.rightStick, y: value };
+      }
+    }
+
+    // Handle stick button press state
+    if (eventType.button_press === "LeftStick") {
+      state.leftStick = { ...state.leftStick, pressed: true };
+    } else if (eventType.button_release === "LeftStick") {
+      state.leftStick = { ...state.leftStick, pressed: false };
+    } else if (eventType.button_press === "RightStick") {
+      state.rightStick = { ...state.rightStick, pressed: true };
+    } else if (eventType.button_release === "RightStick") {
+      state.rightStick = { ...state.rightStick, pressed: false };
+    }
+    console.log("updateGamepadState state", state);
+
+    setGamepadState(state);
+  };
 
   const updateKeyMap = (e: InputEvent) => {
     const km = { ...keyMap() };
@@ -179,28 +319,45 @@ function App() {
     setKeyMap(km);
   };
 
-  const push = async (keys: StackItem["keys"]) => {
+  const push = async (keys: StackItem["keys"], isGamepad = false) => {
     const v = stack();
     const km = keyMap();
+    const gp = gamepadState();
     const now = Date.now();
     const top = v.at(-1);
     const monitor = await primaryMonitor();
     const size = getSize(monitor?.scaleFactor);
     const pos = getPosition(monitor, size);
+
+    // Include stick data for gamepad events
+    const stickData = isGamepad ? {
+      leftStick: { ...gp.leftStick },
+      rightStick: { ...gp.rightStick },
+    } : {};
+
     if (!top) {
-      v.push({ ...size, ...pos, ts: now, keys, id: keyId++ });
+      v.push({ ...size, ...pos, ts: now, keys, id: keyId++, ...stickData });
     } else {
       const topStr = top.keys.map((i) => i.key).join(" ");
-      if (
-        topStr === keys.map((i) => i.key).join(" ") ||
-        keys.every(({ key }) => top.keys.find((i) => i.key === key))
-      ) {
+      // Compare both key name AND isGamepad flag to distinguish keyboard vs gamepad inputs
+      const keysMatch = topStr === keys.map((i) => i.key).join(" ") &&
+        top.keys.every((i) => keys.find((k) => k.key === i.key && !!k.isGamepad === !!i.isGamepad));
+      const isSubset = keys.every(({ key, isGamepad: isGp }) =>
+        top.keys.find((i) => i.key === key && !!i.isGamepad === !!isGp)
+      );
+
+      if (keysMatch || isSubset) {
         top.ts = Date.now();
         for (const i of top.keys) {
-          i.press = km[i.key];
+          i.press = i.isGamepad ? gp.buttons[i.key] : km[i.key];
+        }
+        // Update stick data
+        if (isGamepad) {
+          top.leftStick = { ...gp.leftStick };
+          top.rightStick = { ...gp.rightStick };
         }
       } else {
-        v.push({ ...size, ...pos, ts: now, keys, id: keyId++ });
+        v.push({ ...size, ...pos, ts: now, keys, id: keyId++, ...stickData });
       }
     }
 
@@ -245,13 +402,23 @@ function App() {
     const top = list.at(-1);
     if (top) {
       const km = keyMap();
+      const gp = gamepadState();
       for (const i of top.keys) {
-        i.press = ["WheelDown", "WheelUp"].includes(i.key) ? false : km[i.key];
+        if (i.isGamepad) {
+          i.press = gp.buttons[i.key];
+        } else {
+          i.press = ["WheelDown", "WheelUp"].includes(i.key) ? false : km[i.key];
+        }
         if (
           ["LeftClick", "RightClick", "WheelClick"].includes(i.key) && km[i.key]
         ) {
           top.ts = Date.now();
         }
+      }
+      // Update stick data if present
+      if (top.leftStick || top.rightStick) {
+        top.leftStick = { ...gp.leftStick };
+        top.rightStick = { ...gp.rightStick };
       }
     }
     return list;
@@ -260,11 +427,30 @@ function App() {
   onMount(async () => {
     await initWindows();
     const inputHandle = await listen<InputEvent>("input-event", (event) => {
+      console.log("input event", event.payload);
       updateKeyMap(event.payload);
       const keys = keyMapString();
       if (keys.length) {
         setKeys(keys);
         push(keys);
+      }
+    });
+
+    const gamepadHandle = await listen<PadEvent>("gamepad-event", (event) => {
+      console.log("gamepad event", event.payload);
+      updateGamepadState(event.payload);
+      const keys = gamepadKeyMapString();
+      const gp = gamepadState();
+      // Check if there's any active input (buttons or stick movement)
+      const hasStickMovement =
+        Math.abs(gp.leftStick.x) > 0.1 ||
+        Math.abs(gp.leftStick.y) > 0.1 ||
+        Math.abs(gp.rightStick.x) > 0.1 ||
+        Math.abs(gp.rightStick.y) > 0.1;
+
+      if (keys.length || hasStickMovement) {
+        setKeys(keys);
+        push(keys, true);
       }
     });
 
@@ -286,6 +472,7 @@ function App() {
       clearInterval(handleCheck);
       clearInterval(handleRemove);
       inputHandle();
+      gamepadHandle();
       hideHandle();
       showHanlde();
     });
