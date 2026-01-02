@@ -72,6 +72,8 @@ body {
   justify-content: center;
   align-items: center;
   margin: 0 4px;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 /* Stick center dot */

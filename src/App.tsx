@@ -109,7 +109,7 @@ function EventItem(
 const MEASURE_TEXT_ID = "MEASURE_TEXT_ID";
 
 // Stick indicator component for visualizing analog stick position
-const STICK_SIZE = 48;
+const STICK_SIZE = 44;
 const STICK_DOT_SIZE = 12;
 
 function StickIndicator(
