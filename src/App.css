@@ -23,7 +23,9 @@ body {
   flex: none;
   flex-direction: row;
   justify-content: center;
-  align-items: center;
+  /* Stretch, not center: the repeat counter uses a smaller font, and stretching
+     keeps its black background exactly as tall as the key chips. */
+  align-items: stretch;
   width: fit-content;
   height: fit-content;
   font-weight: bold;
@@ -43,7 +45,8 @@ body {
   color: yellow;
 }
 
-/* Repeat counter shown after a combination that was pressed more than once. */
+/* Repeat counter shown after a combination that was pressed more than once. Its
+   colour is set inline from REPEAT_COLORS, escalating with the count. */
 .event-count {
   display: flex;
   justify-content: center;
@@ -51,6 +54,5 @@ body {
   width: fit-content;
   white-space: nowrap;
   background: black;
-  color: #aaaaaa;
   font-size: 0.75em;
 }

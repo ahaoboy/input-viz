@@ -22,6 +22,22 @@ export const KEY_PADDING_PX = 12;
 /** Prefix of the repeat counter shown after a repeatedly pressed combination. */
 export const REPEAT_PREFIX = "×";
 
+/**
+ * Text colour of the repeat counter, escalating with the number of repeated
+ * presses so the count is distinguishable at a glance.
+ *
+ * The first entry is used for `×2`, the last one for that count and anything
+ * above it. The colours read clearly on the black chip and none of them collide
+ * with the white key labels or the yellow pressed state.
+ */
+export const REPEAT_COLORS: readonly string[] = [
+  "#8be9fd", // ×2
+  "#50fa7b", // ×3
+  "#bd93f9", // ×4
+  "#ff79c6", // ×5
+  "#ff5555", // ×6 and above
+];
+
 /** Id of the hidden element in the controller window used to measure a card. */
 export const MEASURE_ELEMENT_ID = "measure";
 

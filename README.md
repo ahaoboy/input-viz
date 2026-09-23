@@ -13,6 +13,11 @@ counter after it, e.g. `A ×3`. The counter follows the card, so a combination
 that is refreshed because one of its keys was released keeps its count, while a
 new combination starts back at one.
 
+The counter is rendered smaller than the key labels but stretched to the same
+height, and its colour escalates with the count (cyan at `×2`, through green,
+purple and pink, to red from `×6` on) so the number of repeats is readable at a
+glance. Edit `REPEAT_COLORS` in `constants.ts` to change the palette.
+
 Operating system auto-repeat (holding a key down) does not increase the counter,
 only a fresh press does.
 

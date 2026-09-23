@@ -1,5 +1,5 @@
 import { type Accessor, For, Show } from "solid-js";
-import { FONT_SIZE_PX, KEY_PADDING_PX, REPEAT_PREFIX } from "../constants";
+import { FONT_SIZE_PX, KEY_PADDING_PX, REPEAT_COLORS, REPEAT_PREFIX } from "../constants";
 import type { KeyState } from "../types";
 
 type EventItemProps = {
@@ -10,6 +10,14 @@ type EventItemProps = {
   /** When true, pressed keys are not highlighted. */
   noColor?: Accessor<boolean>;
 };
+
+/**
+ * Colour of the repeat counter for a given count. Counts beyond the palette are
+ * clamped to its most intense colour.
+ */
+function repeatColor(repeat: number): string {
+  return REPEAT_COLORS[Math.min(repeat - 2, REPEAT_COLORS.length - 1)];
+}
 
 /**
  * Renders a single card as a row of key labels, followed by a repeat counter
@@ -35,7 +43,13 @@ export function EventItem(props: EventItemProps) {
         )}
       </For>
       <Show when={repeat() > 1}>
-        <div class="event-count" style={{ padding: `${KEY_PADDING_PX}px` }}>
+        <div
+          class="event-count"
+          style={{
+            padding: `${KEY_PADDING_PX}px`,
+            color: repeatColor(repeat()),
+          }}
+        >
           {REPEAT_PREFIX}
           {repeat()}
         </div>
