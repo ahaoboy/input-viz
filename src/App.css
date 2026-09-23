@@ -1,15 +1,15 @@
-html, body {
-  padding: 0;
+html,
+body {
   margin: 0;
-  background: #00000000;
+  padding: 0;
   border: 0;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  background: #00000000;
+  color: #00000000;
   pointer-events: none;
   user-select: none;
-  overflow: hidden;
-  color: #00000000;
 }
 
 #root {
@@ -19,22 +19,24 @@ html, body {
 }
 
 .event-item {
-  font-weight: bold;
   display: flex;
-  width: fit-content;
+  flex: none;
+  flex-direction: row;
   justify-content: center;
   align-items: center;
-  flex-direction: row;
+  width: fit-content;
   height: fit-content;
+  font-weight: bold;
   color: white;
 }
 
 .event-text {
-  background: black;
   display: flex;
-  width: fit-content;
   justify-content: center;
   align-items: center;
+  width: fit-content;
+  white-space: nowrap;
+  background: black;
 }
 
 .event-text-press {

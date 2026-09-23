@@ -40,9 +40,7 @@
     "createUpdaterArtifacts": true,
     "active": true,
     "targets": "all",
-    "icon": [
-      "icons/icon.ico"
-    ],
+    "icon": ["icons/icon.ico"],
     "windows": {
       "nsis": {
         "compression": "none",
@@ -56,9 +54,7 @@
         "installMode": "passive"
       },
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVCQzVCOEVEQTMyODlGMDYKUldRR255aWo3YmpGV3k1M1J6VXE4WGlXSEs2UStIMWJJQ3FLdDFZL1hGQU1ha2s3bkxVMExTeWsK",
-      "endpoints": [
-        "https://github.com/ahaoboy/input-viz/releases/latest/download/latest.json"
-      ]
+      "endpoints": ["https://github.com/ahaoboy/input-viz/releases/latest/download/latest.json"]
     }
   }
 }

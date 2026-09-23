@@ -1,10 +1,10 @@
 {
   "name": "input-viz",
-  "private": true,
   "version": "0.1.1",
+  "private": true,
   "type": "module",
   "scripts": {
-    "format": "deno fmt",
+    "pre-check": "oxfmt && oxlint --fix",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -17,6 +17,8 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.11.5",
+    "oxfmt": "0.70.0",
+    "oxlint": "1.85.0",
     "typescript": "7.0.2",
     "vite": "8.3.0",
     "vite-plugin-solid": "2.11.14"

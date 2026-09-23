@@ -17,30 +17,20 @@ name = "input_viz_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { workspace = true }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+tauri = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+rdev = { workspace = true }
 
-# rdev = { version = "*", features = ["serialize"] }
-# https://github.com/Narsil/rdev/pull/153
-rdev = { git = "https://github.com/Narsil/rdev", features = ["serialize"] }
-
-[profile.release]
-debug = false
-lto = true
-strip = true
-opt-level = "s"
-codegen-units = 1
-
-[profile.bloaty]
-debug = true
-lto = false
-strip = false
-inherits = 'release'
+# Only used to drive the `log` facade; enabled by the `RUST_LOG` environment
+# variable and silent when it is unset.
+env_logger = { workspace = true }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-single-instance = "2"
-tauri-plugin-updater = "2"
+tauri-plugin-single-instance = { workspace = true }
+tauri-plugin-updater = { workspace = true }

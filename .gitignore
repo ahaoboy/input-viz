@@ -1,6 +1,7 @@
 pnpm-lock.yaml
 bun.lock
-
+target
+Cargo.lock
 # Logs
 logs
 *.log
