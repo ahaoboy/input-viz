@@ -12,6 +12,7 @@ import { EventItem } from "./EventItem";
  */
 export function KeyCard() {
   const [keys, setKeys] = createSignal<KeyState[]>([]);
+  const [repeat, setRepeat] = createSignal(1);
   const [noColor, setNoColor] = createSignal(true);
 
   onMount(() => {
@@ -29,6 +30,7 @@ export function KeyCard() {
         if (event.payload.label !== label) return;
         log.debug("cleared");
         setKeys([]);
+        setRepeat(1);
         setNoColor(true);
       }),
     );
@@ -38,9 +40,11 @@ export function KeyCard() {
         if (event.payload.label !== label) return;
         log.debug("update", {
           keys: event.payload.item.keys.map((k) => k.key),
+          repeat: event.payload.item.repeat,
           noColor: event.payload.noColor,
         });
         setKeys(event.payload.item.keys);
+        setRepeat(event.payload.item.repeat);
         setNoColor(event.payload.noColor);
       }),
     );
@@ -53,5 +57,5 @@ export function KeyCard() {
     });
   });
 
-  return <EventItem id={CARD_ELEMENT_ID} keys={keys} noColor={noColor} />;
+  return <EventItem id={CARD_ELEMENT_ID} keys={keys} repeat={repeat} noColor={noColor} />;
 }

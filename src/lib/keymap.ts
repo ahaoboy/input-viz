@@ -91,3 +91,16 @@ export function pressedKeys(keyMap: KeyMap): KeyState[] {
   }
   return keys.sort((a, b) => keyWeight(b.key) - keyWeight(a.key));
 }
+
+/**
+ * Whether a `KeyPress` event is the operating system repeating a key that is
+ * already down rather than a fresh press.
+ *
+ * Auto-repeat would otherwise be counted as a repeated press, so holding a key
+ * would inflate the repeat count. Mouse buttons and the wheel are never
+ * auto-repeated.
+ */
+export function isAutoRepeat(keyMap: KeyMap, event: InputEvent): boolean {
+  const key = event.event_type.KeyPress;
+  return key !== undefined && keyMap[toDisplayKey(key)] === true;
+}

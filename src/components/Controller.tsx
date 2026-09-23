@@ -18,9 +18,17 @@ import {
   SHOW_UI_EVENT,
 } from "../constants";
 import { bottomRightPoint, measureElement } from "../lib/geometry";
-import { applyInputEvent, pressedKeys } from "../lib/keymap";
+import { applyInputEvent, isAutoRepeat, pressedKeys } from "../lib/keymap";
 import { createLogger } from "../lib/logger";
-import { describeLayout, expireOldest, planWindows, pushItem, refreshNewest } from "../lib/stack";
+import {
+  describeLayout,
+  displayedKeys,
+  expireOldest,
+  nextRepeat,
+  planWindows,
+  pushItem,
+  refreshNewest,
+} from "../lib/stack";
 import type { HideEvent, InputEvent, KeyMap, KeyState, StackItem, UpdateEvent } from "../types";
 import { EventItem } from "./EventItem";
 
@@ -37,6 +45,7 @@ export function Controller() {
   const [keyMap, setKeyMap] = createSignal<KeyMap>({});
   const [stack, setStack] = createSignal<StackItem[]>([]);
   const [measureKeys, setMeasureKeys] = createSignal<KeyState[]>([]);
+  const [measureRepeat, setMeasureRepeat] = createSignal(1);
   const [hidden, setHidden] = createSignal(false);
   const [devMode, setDevMode] = createSignal(false);
   const [ready, setReady] = createSignal(false);
@@ -116,20 +125,29 @@ export function Controller() {
   const handleInput = async (event: InputEvent) => {
     log.debug("input event", event.event_type);
 
-    const map = applyInputEvent(keyMap(), event);
+    const previous = keyMap();
+    const map = applyInputEvent(previous, event);
     setKeyMap(map);
 
     const keys = pressedKeys(map);
     if (keys.length === 0) return;
 
-    // Render the keys first so the hidden element can be measured below.
-    setMeasureKeys(keys);
+    // An auto-repeat must not bump the counter, only a fresh press does.
+    const items = stack();
+    const repeat = nextRepeat(items, keys, !isAutoRepeat(previous, event));
+
+    // Render the keys first so the hidden element can be measured below. The
+    // displayed set (a merge keeps the card's full combination) and the counter
+    // are both included, so the window always fits its content.
+    setMeasureKeys(displayedKeys(items, keys));
+    setMeasureRepeat(repeat);
 
     const monitor = await primaryMonitor();
     const size = measureElement(MEASURE_ELEMENT_ID, monitor?.scaleFactor);
     const point = monitor ? bottomRightPoint(monitor.size, size) : { x: 0, y: 0 };
     log.debug("measured", {
       keys: keys.map((k) => k.key),
+      repeat,
       size,
       anchor: point,
       screen: monitor ? { w: monitor.size.width, h: monitor.size.height } : null,
@@ -137,7 +155,17 @@ export function Controller() {
     });
 
     setStack((prev) =>
-      pushItem(prev, keys, map, size, point, monitor?.size.height ?? 0, Date.now(), () => nextId++),
+      pushItem(
+        prev,
+        keys,
+        repeat,
+        map,
+        size,
+        point,
+        monitor?.size.height ?? 0,
+        Date.now(),
+        () => nextId++,
+      ),
     );
   };
 
@@ -200,5 +228,5 @@ export function Controller() {
     applyStack(items);
   });
 
-  return <EventItem id={MEASURE_ELEMENT_ID} keys={measureKeys} />;
+  return <EventItem id={MEASURE_ELEMENT_ID} keys={measureKeys} repeat={measureRepeat} />;
 }

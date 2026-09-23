@@ -42,3 +42,15 @@ body {
 .event-text-press {
   color: yellow;
 }
+
+/* Repeat counter shown after a combination that was pressed more than once. */
+.event-count {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: fit-content;
+  white-space: nowrap;
+  background: black;
+  color: #aaaaaa;
+  font-size: 0.75em;
+}

@@ -19,6 +19,9 @@ export const FONT_SIZE_PX = 24;
 /** Padding around a single key label (px). */
 export const KEY_PADDING_PX = 12;
 
+/** Prefix of the repeat counter shown after a repeatedly pressed combination. */
+export const REPEAT_PREFIX = "×";
+
 /** Id of the hidden element in the controller window used to measure a card. */
 export const MEASURE_ELEMENT_ID = "measure";
 

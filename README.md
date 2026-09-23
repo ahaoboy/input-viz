@@ -6,6 +6,16 @@ input-viz displays keystrokes and mouse actions directly on your desktop.
 
 ![input-viz](./public/input-viz.gif)
 
+## Repeat counter
+
+Pressing the same combination again without switching to another one shows a
+counter after it, e.g. `A ×3`. The counter follows the card, so a combination
+that is refreshed because one of its keys was released keeps its count, while a
+new combination starts back at one.
+
+Operating system auto-repeat (holding a key down) does not increase the counter,
+only a fresh press does.
+
 ## Installation
 
 You can download the latest version of `input-viz` from the

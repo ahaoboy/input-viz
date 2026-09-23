@@ -11,6 +11,11 @@ export type StackItem = {
   w: number;
   h: number;
   keys: KeyState[];
+  /**
+   * How many times this exact key combination was pressed in a row. `1` means a
+   * single press, so no counter is shown.
+   */
+  repeat: number;
   /** Timestamp of the last update, used for expiration. */
   ts: number;
   /** Monotonic id, used to build a stable event identity for the card. */
