@@ -6,7 +6,6 @@ authors = ["ahaoboy"]
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/ahaoboy/input-viz"
-homepage = "https://github.com/ahaoboy/input-viz"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

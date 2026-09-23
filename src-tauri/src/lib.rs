@@ -66,6 +66,7 @@ pub fn run() {
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_item, &hide_item, &quit_item])?;
             let _ = TrayIconBuilder::new()
+                .tooltip("input-viz")
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
                 .show_menu_on_left_click(true)
