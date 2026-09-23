@@ -1,4 +1,5 @@
 # input-viz
+![input-viz](./public/icon.png)
 
 input-viz displays keystrokes and mouse actions directly on your desktop.
 
