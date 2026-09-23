@@ -49,7 +49,7 @@ jobs:
         run: |
           for item in msi nsis; do
             mkdir ./$item
-            cp -r ./src-tauri/target/release/bundle/$item ./$item
+            cp -r target/release/bundle/$item ./$item
             cd ./$item
             7z a -tzip "../$item.zip" . -r
             cd ..
