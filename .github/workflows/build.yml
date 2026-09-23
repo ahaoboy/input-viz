@@ -38,15 +38,13 @@ jobs:
           components: rustfmt,clippy
           rustflags: "-A warnings"
           toolchain: "stable"
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - uses: oven-sh/setup-bun@v2
       - name: install
         run: |
-          pnpm install
+          bun install
       - name: build
         run: |
-          pnpm run tauri build
+          bun run tauri build
       - name: zip
         run: |
           for item in msi nsis; do
